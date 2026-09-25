@@ -81,36 +81,55 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
   }
 }
 
-/// Top of a battle: competition · stage, and when the vote closes.
+/// Top of a battle: the competition in full, then the group or stage and when the vote closes.
 class _BattleHeader extends StatelessWidget {
   const _BattleHeader({required this.battle});
 
   final Battle battle;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.fromLTRB(Space.lg, MediaQuery.paddingOf(context).top + 52, Space.lg, 0),
-    child: Row(
-      children: [
-        Flexible(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: 6),
-            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(Radii.pill)),
-            child: Text(
-              [
-                battle.competitionName,
-                battle.isGroup ? battle.title : (battle.stage ?? 'Battle'),
-                if (battle.closesAt != null) 'ferme ${Labels.remaining(battle.closesAt!)}',
-              ].join(' · '),
-              maxLines: 1,
+  Widget build(BuildContext context) {
+    final where = battle.isGroup ? {battle.title, ?battle.stage}.join(' · ') : (battle.stage ?? 'Battle');
+    return Padding(
+      padding: EdgeInsets.fromLTRB(Space.lg, MediaQuery.paddingOf(context).top + 52, Space.lg, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.sm),
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(Radii.md)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              battle.competitionName,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: context.text.labelMedium?.copyWith(color: Colors.white),
+              style: context.text.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
             ),
-          ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    where,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.labelMedium?.copyWith(color: Colors.white70),
+                  ),
+                ),
+                if (battle.closesAt != null) ...[
+                  const SizedBox(width: Space.md),
+                  const Icon(AppIcons.pending, size: 13, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Text('Ferme ${Labels.remaining(battle.closesAt!)}', style: context.text.labelMedium?.copyWith(color: Colors.white70)),
+                ],
+              ],
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 /// Casts a vote from a battle: account and verified phone first, room code battles on

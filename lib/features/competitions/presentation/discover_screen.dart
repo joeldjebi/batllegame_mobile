@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -8,8 +9,8 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/labels.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/grouped_list.dart';
 import '../../../core/widgets/resource_view.dart';
-import '../../../core/widgets/status_chip.dart';
 import '../data/models.dart';
 import '../data/providers.dart';
 
@@ -36,64 +37,103 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final c = context.colors;
     final value = ref.watch(competitionsProvider(_status));
 
-    return SafeArea(
-      bottom: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.gutter, Space.lg, Space.gutter, Space.md),
-            child: Text('Découvrir', style: context.text.headlineMedium),
-          ),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
-              itemCount: _filters.length,
-              separatorBuilder: (_, _) => const SizedBox(width: Space.sm),
-              itemBuilder: (context, i) {
-                final filter = _filters[i];
-                final selected = filter.status == _status;
-                return ChoiceChip(
-                  label: Text(filter.label),
-                  selected: selected,
-                  showCheckmark: false,
-                  onSelected: (_) => setState(() => _status = filter.status),
-                  labelStyle: context.text.labelMedium?.copyWith(color: selected ? c.onPrimary : c.text),
-                  selectedColor: c.primary,
-                  backgroundColor: c.surfaceRaised,
-                  side: BorderSide(color: selected ? c.primary : c.border),
-                  shape: const StadiumBorder(),
-                );
-              },
+    return ColoredBox(
+      color: groupedBackground(context),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: Space.gutter),
+              child: LargeTitle('Découvrir'),
             ),
-          ),
-          const SizedBox(height: Space.md),
-          Expanded(
-            child: ResourceView(
-              value: value,
-              onRetry: () => ref.invalidate(competitionsProvider(_status)),
-              builder: (page, resource) => RefreshIndicator(
-                color: c.primary,
-                onRefresh: () async => ref.invalidate(competitionsProvider(_status)),
-                child: page.items.isEmpty
-                    ? ListView(children: const [SizedBox(height: 80), EmptyState(icon: AppIcons.trophy, title: 'Aucune compétition', message: 'Reviens bientôt : de nouvelles battles arrivent.')])
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.xxl),
-                        itemCount: page.items.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: Space.md),
-                        itemBuilder: (context, i) => CompetitionCard(competition: page.items[i]),
-                      ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.lg),
+              child: _Segmented(selected: _status, onChanged: (status) => setState(() => _status = status)),
+            ),
+            Expanded(
+              child: ResourceView(
+                value: value,
+                onRetry: () => ref.invalidate(competitionsProvider(_status)),
+                builder: (page, resource) => RefreshIndicator(
+                  color: c.primary,
+                  onRefresh: () async => ref.invalidate(competitionsProvider(_status)),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.xxl),
+                    children: [
+                      if (page.items.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: Space.xxxl),
+                          child: EmptyState(icon: AppIcons.trophy, title: 'Aucune compétition', message: 'Reviens bientôt : de nouvelles battles arrivent.'),
+                        )
+                      else
+                        GroupedSection(
+                          header: '${page.items.length} compétition${page.items.length > 1 ? 's' : ''}',
+                          children: [for (final competition in page.items) CompetitionCard(competition: competition)],
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Status filter, the iOS segmented control way.
+class _Segmented extends StatelessWidget {
+  const _Segmented({required this.selected, required this.onChanged});
+
+  final String? selected;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final light = Theme.of(context).brightness == Brightness.light;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: light ? const Color(0x1F767680) : c.surfaceRaised, borderRadius: BorderRadius.circular(Radii.md)),
+      child: Row(
+        children: [
+          for (final filter in _filters)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: filter.status == selected,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChanged(filter.status),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: filter.status == selected ? (light ? Colors.white : c.surface) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(Radii.md - 2),
+                      boxShadow: filter.status == selected && light ? const [BoxShadow(color: Color(0x1F000000), blurRadius: 4, offset: Offset(0, 1))] : null,
+                    ),
+                    child: Text(
+                      filter.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.labelMedium?.copyWith(color: c.text, fontWeight: filter.status == selected ? FontWeight.w700 : FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
+/// One competition, as a row of a grouped section: logo, name, organizer, status and date.
 class CompetitionCard extends StatelessWidget {
   const CompetitionCard({super.key, required this.competition});
 
@@ -102,59 +142,48 @@ class CompetitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final tone = switch (competition.status) {
-      'en_cours' => ChipTone.live,
-      'inscriptions' => ChipTone.info,
-      'terminee' => ChipTone.success,
-      _ => ChipTone.neutral,
+    final (label, color) = switch (competition.status) {
+      'en_cours' => ('En cours', c.like),
+      'inscriptions' => ('Inscriptions ouvertes', c.success),
+      'terminee' => ('Terminée', c.textMuted),
+      _ => (Labels.competitionStatus(competition.status), c.textMuted),
     };
+    final details = [
+      Labels.discipline(competition.discipline),
+      competition.entryFee > 0 ? Labels.money(competition.entryFee, competition.currency) : 'Gratuit',
+      if (competition.registrationOpen && competition.registrationEndsAt != null)
+        'jusqu\'au ${DateFormat('d MMM', 'fr').format(competition.registrationEndsAt!.toLocal())}',
+    ].join(' · ');
+    final small = context.text.bodySmall;
 
-    return Material(
-      color: c.surface,
-      borderRadius: BorderRadius.circular(Radii.lg),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.lg),
-        onTap: () => context.push('/competitions/${competition.slug}'),
-        child: Container(
-          padding: const EdgeInsets.all(Space.lg),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(Radii.lg), border: Border.all(color: c.border)),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Radii.md),
-                child: Avatar(name: competition.organizerName ?? competition.name, url: competition.organizerLogoUrl, size: 52),
-              ),
-              const SizedBox(width: Space.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(competition.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    if (competition.organizerName != null)
-                      Text(competition.organizerName!, style: context.text.bodySmall),
-                    const SizedBox(height: Space.sm),
-                    Wrap(
-                      spacing: Space.sm,
-                      runSpacing: Space.xs,
-                      children: [
-                        StatusChip(Labels.competitionStatus(competition.status), tone: tone),
-                        StatusChip(Labels.discipline(competition.discipline)),
-                        StatusChip(Labels.money(competition.entryFee, competition.currency)),
-                      ],
-                    ),
-                    if (competition.registrationOpen && competition.registrationEndsAt != null) ...[
-                      const SizedBox(height: Space.sm),
-                      Text('Inscriptions jusqu\'au ${Labels.day(competition.registrationEndsAt)}', style: context.text.bodySmall?.copyWith(color: c.accent)),
-                    ],
-                  ],
-                ),
-              ),
-              Icon(AppIcons.forward, color: c.textMuted),
-            ],
-          ),
-        ),
+    return GroupedTile(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.md),
+        child: Avatar(name: competition.organizerName ?? competition.name, url: competition.organizerLogoUrl, size: 44),
       ),
+      title: competition.name,
+      subtitle: competition.organizerName,
+      detail: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '● ',
+              style: small?.copyWith(color: color, fontSize: 9),
+            ),
+            TextSpan(
+              text: label,
+              style: small?.copyWith(color: color, fontWeight: FontWeight.w600),
+            ),
+            TextSpan(
+              text: '  ·  $details',
+              style: small?.copyWith(color: c.textMuted),
+            ),
+          ],
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: () => context.push('/competitions/${competition.slug}'),
     );
   }
 }

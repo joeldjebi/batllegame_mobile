@@ -12,7 +12,8 @@ import '../../battles/presentation/battles_view.dart';
 import 'feed_view.dart';
 
 /// Accueil: « Battles » (votes open now) and « Pour toi » (every performance), the
-/// TikTok way: text tabs over the video. Plays only while this tab is shown.
+/// TikTok way: text tabs over the video, a horizontal swipe from one to the other.
+/// Plays only while this tab is shown.
 class HomeFeedScreen extends ConsumerStatefulWidget {
   const HomeFeedScreen({super.key});
 
@@ -22,6 +23,19 @@ class HomeFeedScreen extends ConsumerStatefulWidget {
 
 class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   int _tab = 1;
+  final _pages = PageController(initialPage: 1);
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  void _show(int tab) {
+    if (tab == _tab) return;
+    HapticFeedback.selectionClick();
+    _pages.animateToPage(tab, duration: context.motion(Motion.base), curve: Curves.easeOutCubic);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,11 +47,12 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
           color: Colors.black,
           child: Stack(
             children: [
-              IndexedStack(
-                index: _tab,
+              PageView(
+                controller: _pages,
+                onPageChanged: (tab) => setState(() => _tab = tab),
                 children: [
-                  BattlesView(visible: shown && _tab == 0),
-                  FeedView(visible: shown && _tab == 1, showTitle: false),
+                  _KeepAlive(child: BattlesView(visible: shown && _tab == 0)),
+                  _KeepAlive(child: FeedView(visible: shown && _tab == 1, showTitle: false)),
                 ],
               ),
               Positioned(
@@ -47,9 +62,9 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _TopTab(label: 'Battles', count: open, selected: _tab == 0, onTap: () => setState(() => _tab = 0)),
+                    _TopTab(label: 'Battles', count: open, selected: _tab == 0, onTap: () => _show(0)),
                     const SizedBox(width: Space.xl),
-                    _TopTab(label: 'Pour toi', selected: _tab == 1, onTap: () => setState(() => _tab = 1)),
+                    _TopTab(label: 'Pour toi', selected: _tab == 1, onTap: () => _show(1)),
                   ],
                 ),
               ),
@@ -58,6 +73,27 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Keeps a home page (its position, its player) while the other one is shown.
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 
