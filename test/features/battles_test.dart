@@ -1,8 +1,11 @@
+import 'package:battlegame/core/network/resource.dart';
 import 'package:battlegame/core/theme/app_theme.dart';
 import 'package:battlegame/core/utils/labels.dart';
 import 'package:battlegame/core/widgets/hold_to_vote.dart';
 import 'package:battlegame/features/battles/data/battles.dart';
+import 'package:battlegame/features/battles/presentation/battles_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -124,5 +127,42 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await gesture.up();
     expect(votes, 0);
+  });
+
+  testWidgets('a swipe on a group grid moves to the next battle', (tester) async {
+    Map<String, dynamic> group(int id, String title, int artists) => {
+      'id': id,
+      'is_group': true,
+      'title': title,
+      'competition': {'id': 1, 'slug': 'abidjan', 'name': 'Abidjan Rap'},
+      'artists': [
+        for (var i = 0; i < artists; i++) {'participant_id': id * 10 + i, 'stage_name': 'Artiste $id-$i', 'media': null},
+      ],
+    };
+    final board = BattleBoard.fromJson({
+      'data': [group(1, 'Poule A', 3), group(2, 'Poule B', 4), group(3, 'Poule C', 8)],
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [battlesProvider.overrideWith((ref) => Stream.value(Resource(data: board)))],
+        child: MaterialApp(
+          theme: AppTheme.dark(),
+          home: const Scaffold(body: BattlesView(visible: false)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Artiste 1-0'), findsOneWidget);
+
+    // From the middle of the grid, not the header.
+    await tester.fling(find.text('Artiste 1-0'), const Offset(0, -500), 1500);
+    await tester.pumpAndSettle();
+    expect(find.text('Artiste 2-0'), findsOneWidget);
+
+    // A big group fits on the page too: its last artist is visible.
+    await tester.fling(find.text('Artiste 2-0'), const Offset(0, -500), 1500);
+    await tester.pumpAndSettle();
+    expect(find.text('Artiste 3-7').hitTestable(), findsOneWidget);
   });
 }

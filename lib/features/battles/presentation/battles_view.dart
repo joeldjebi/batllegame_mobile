@@ -378,68 +378,82 @@ class GroupTile extends ConsumerWidget {
             ),
           ),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.xl),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: Space.md,
-                crossAxisSpacing: Space.md,
-                childAspectRatio: 0.62,
-              ),
-              itemCount: battle.artists.length,
-              itemBuilder: (context, i) {
-                final artist = battle.artists[i];
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(Radii.lg),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ColoredBox(
-                        color: const Color(0xFF1E1E2A),
-                        child: artist.media?.posterUrl == null ? null : CachedImage(cacheKey: 'media-${artist.mediaId}-poster', url: artist.media!.posterUrl),
-                      ),
-                      Positioned.fill(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: artist.media == null
-                                ? null
-                                : () => context.push('/lecture', extra: (key: 'media-${artist.mediaId}', media: artist.media!, title: artist.stageName)),
-                            child: const Center(
-                              child: Icon(AppIcons.play, color: Colors.white, size: 30, shadows: _shadow),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: Space.sm,
-                        right: Space.sm,
-                        bottom: Space.sm,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              artist.stageName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.text.labelLarge?.copyWith(color: Colors.white, shadows: _shadow),
-                            ),
-                            const SizedBox(height: Space.xs),
-                            HoldToVote(
-                              compact: true,
-                              label: 'Voter',
-                              onQuickTap: () => showToast(context, 'Maintiens le bouton appuyé pour voter.'),
-                              voted: voted == artist.participantId,
-                              enabled: canVote,
-                              onVote: () => voteIn(context, ref, battle, artist),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+            // The whole group fits on the page: the grid never scrolls, so a vertical
+            // swipe anywhere moves to the next battle.
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final count = battle.artists.length;
+                final columns = count > 6 ? 3 : (count > 1 ? 2 : 1);
+                final rows = (count / columns).ceil().clamp(1, 99);
+                const padding = EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.xl);
+                final width = (box.maxWidth - padding.horizontal - (columns - 1) * Space.md) / columns;
+                final height = (box.maxHeight - padding.vertical - (rows - 1) * Space.md) / rows;
+                return GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: padding,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: Space.md,
+                    crossAxisSpacing: Space.md,
+                    childAspectRatio: height > 0 ? (width / height).clamp(0.45, 1.6) : 0.62,
                   ),
+                  itemCount: count,
+                  itemBuilder: (context, i) => _groupCell(context, ref, battle, battle.artists[i], voted, canVote),
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _groupCell(BuildContext context, WidgetRef ref, Battle battle, BattleArtist artist, int? voted, bool canVote) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(Radii.lg),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(
+            color: const Color(0xFF1E1E2A),
+            child: artist.media?.posterUrl == null ? null : CachedImage(cacheKey: 'media-${artist.mediaId}-poster', url: artist.media!.posterUrl),
+          ),
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: artist.media == null
+                    ? null
+                    : () => context.push('/lecture', extra: (key: 'media-${artist.mediaId}', media: artist.media!, title: artist.stageName)),
+                child: const Center(
+                  child: Icon(AppIcons.play, color: Colors.white, size: 30, shadows: _shadow),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: Space.sm,
+            right: Space.sm,
+            bottom: Space.sm,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  artist.stageName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.labelLarge?.copyWith(color: Colors.white, shadows: _shadow),
+                ),
+                const SizedBox(height: Space.xs),
+                HoldToVote(
+                  compact: true,
+                  label: 'Voter',
+                  onQuickTap: () => showToast(context, 'Maintiens le bouton appuyé pour voter.'),
+                  voted: voted == artist.participantId,
+                  enabled: canVote,
+                  onVote: () => voteIn(context, ref, battle, artist),
+                ),
+              ],
             ),
           ),
         ],
