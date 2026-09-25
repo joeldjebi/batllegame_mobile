@@ -79,13 +79,70 @@ class Battle {
   bool get isDuel => !isGroup && artists.length == 2;
 }
 
-final battlesProvider = StreamProvider.autoDispose<Resource<List<Battle>>>((ref) {
-  ref.watch(currentUserProvider.select((u) => u?.id));
-  return watchResource(
-    ref.watch(apiClientProvider),
-    '/live',
-    (json) => [for (final b in ((json! as Map<String, dynamic>)['data'] as List<dynamic>)) Battle.fromJson(b as Map<String, dynamic>)],
+/// A battle whose public vote opens later (submissions running or vote planned).
+class UpcomingBattle {
+  const UpcomingBattle({
+    required this.id,
+    required this.isGroup,
+    required this.title,
+    required this.competitionSlug,
+    required this.competitionName,
+    required this.opensAt,
+    required this.artists,
+    this.stage,
+    this.submissionsOpen = false,
+    this.isMine = false,
+  });
+
+  factory UpcomingBattle.fromJson(Map<String, dynamic> json) {
+    final competition = json['competition'] as Map<String, dynamic>;
+    return UpcomingBattle(
+      id: json['id'] as int,
+      isGroup: json['is_group'] == true,
+      title: json['title'] as String,
+      stage: json['stage'] as String?,
+      competitionSlug: competition['slug'] as String,
+      competitionName: competition['name'] as String,
+      opensAt: parseDate(json['voting_opens_at']) ?? DateTime.now(),
+      submissionsOpen: json['submissions_open'] == true,
+      isMine: json['is_mine'] == true,
+      artists: [
+        for (final a in (json['artists'] as List<dynamic>).cast<Map<String, dynamic>>())
+          BattleArtist(participantId: a['participant_id'] as int, stageName: a['stage_name'] as String, avatarUrl: a['avatar_url'] as String?),
+      ],
+    );
+  }
+
+  final int id;
+  final bool isGroup;
+  final String title;
+  final String? stage;
+  final String competitionSlug;
+  final String competitionName;
+  final DateTime opensAt;
+  final bool submissionsOpen;
+  final bool isMine;
+  final List<BattleArtist> artists;
+}
+
+/// The Battles tab: votes open now, then what comes next.
+class BattleBoard {
+  const BattleBoard({this.open = const [], this.upcoming = const []});
+
+  factory BattleBoard.fromJson(Map<String, dynamic> json) => BattleBoard(
+    open: [for (final b in (json['data'] as List<dynamic>)) Battle.fromJson(b as Map<String, dynamic>)],
+    upcoming: [for (final b in (json['upcoming'] as List<dynamic>? ?? const [])) UpcomingBattle.fromJson(b as Map<String, dynamic>)],
   );
+
+  final List<Battle> open;
+  final List<UpcomingBattle> upcoming;
+
+  bool get isEmpty => open.isEmpty && upcoming.isEmpty;
+}
+
+final battlesProvider = StreamProvider.autoDispose<Resource<BattleBoard>>((ref) {
+  ref.watch(currentUserProvider.select((u) => u?.id));
+  return watchResource(ref.watch(apiClientProvider), '/live', (json) => BattleBoard.fromJson(json! as Map<String, dynamic>));
 });
 
 /// Votes given from the Battles tab, shown at once and sent through the offline queue

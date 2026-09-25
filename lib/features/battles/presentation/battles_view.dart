@@ -24,7 +24,7 @@ import '../data/battles.dart';
 const _shadow = [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(0, 1))];
 
 /// « Battles »: the matches whose vote is open, one per page (duels face to face,
-/// groups as a grid), soonest to close first.
+/// groups as a grid), soonest to close first; then the battles coming next.
 class BattlesView extends ConsumerStatefulWidget {
   const BattlesView({super.key, required this.visible});
 
@@ -40,36 +40,36 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
   @override
   Widget build(BuildContext context) {
     final resource = ref.watch(battlesProvider).valueOrNull;
-    final battles = resource?.data;
+    final board = resource?.data;
     final c = context.colors;
 
-    if (battles == null) {
+    if (board == null) {
       return resource?.error != null
           ? EmptyState(icon: AppIcons.offline, title: 'Battles indisponibles', message: resource!.error!.message)
           : const Center(child: CircularProgressIndicator(color: Colors.white54));
     }
-    if (battles.isEmpty) {
+    if (board.isEmpty) {
       return EmptyState(
         icon: AppIcons.battle,
         title: 'Aucun vote ouvert en ce moment',
         message: 'Les battles apparaissent ici dès que le public peut voter.',
-        action: AppButton(
-          label: 'Voir les compétitions',
-          expand: false,
-          variant: AppButtonVariant.secondary,
-          onPressed: () => context.go('/decouvrir'),
-        ),
+        action: AppButton(label: 'Voir les compétitions', expand: false, variant: AppButtonVariant.secondary, onPressed: () => context.go('/decouvrir')),
       );
     }
 
+    // No vote open: what comes next, and when.
+    if (board.open.isEmpty) return UpcomingView(upcoming: board.upcoming, nothingOpen: true);
+
+    final battles = board.open;
     return RefreshIndicator(
       color: c.primary,
       onRefresh: () async => ref.invalidate(battlesProvider),
       child: PageView.builder(
         scrollDirection: Axis.vertical,
-        itemCount: battles.length,
+        itemCount: battles.length + (board.upcoming.isEmpty ? 0 : 1),
         onPageChanged: (i) => setState(() => _index = i),
         itemBuilder: (context, i) {
+          if (i == battles.length) return UpcomingView(upcoming: board.upcoming);
           final battle = battles[i];
           final active = widget.visible && i == _index;
           return battle.isDuel
@@ -373,9 +373,7 @@ class GroupTile extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.lg, Space.sm),
             child: Text(
-              battle.votedInPhase
-                  ? 'Tu as déjà voté dans cette phase.'
-                  : 'Un seul vote pour toute la phase : touche une prestation pour la regarder.',
+              battle.votedInPhase ? 'Tu as déjà voté dans cette phase.' : 'Un seul vote pour toute la phase : touche une prestation pour la regarder.',
               style: context.text.bodySmall?.copyWith(color: Colors.white70),
             ),
           ),
@@ -398,9 +396,7 @@ class GroupTile extends ConsumerWidget {
                     children: [
                       ColoredBox(
                         color: const Color(0xFF1E1E2A),
-                        child: artist.media?.posterUrl == null
-                            ? null
-                            : CachedImage(cacheKey: 'media-${artist.mediaId}-poster', url: artist.media!.posterUrl),
+                        child: artist.media?.posterUrl == null ? null : CachedImage(cacheKey: 'media-${artist.mediaId}-poster', url: artist.media!.posterUrl),
                       ),
                       Positioned.fill(
                         child: Material(
@@ -408,10 +404,7 @@ class GroupTile extends ConsumerWidget {
                           child: InkWell(
                             onTap: artist.media == null
                                 ? null
-                                : () => context.push(
-                                    '/lecture',
-                                    extra: (key: 'media-${artist.mediaId}', media: artist.media!, title: artist.stageName),
-                                  ),
+                                : () => context.push('/lecture', extra: (key: 'media-${artist.mediaId}', media: artist.media!, title: artist.stageName)),
                             child: const Center(
                               child: Icon(AppIcons.play, color: Colors.white, size: 30, shadows: _shadow),
                             ),
@@ -450,6 +443,158 @@ class GroupTile extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The battles whose vote opens later, soonest first. Ticks every 30 s; once an
+/// opening time is past, reloads so the battle moves to the votes.
+class UpcomingView extends ConsumerStatefulWidget {
+  const UpcomingView({super.key, required this.upcoming, this.nothingOpen = false});
+
+  final List<UpcomingBattle> upcoming;
+  final bool nothingOpen;
+
+  @override
+  ConsumerState<UpcomingView> createState() => _UpcomingViewState();
+}
+
+class _UpcomingViewState extends ConsumerState<UpcomingView> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      final due = widget.upcoming.any((b) => DateTime.now().difference(b.opensAt).inSeconds > 45);
+      due ? ref.invalidate(battlesProvider) : setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ColoredBox(
+      color: c.background,
+      child: RefreshIndicator(
+        color: c.primary,
+        onRefresh: () async => ref.invalidate(battlesProvider),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(Space.gutter, MediaQuery.paddingOf(context).top + 60, Space.gutter, Space.xxl),
+          children: [
+            if (widget.nothingOpen) ...[
+              Text('Aucun vote ouvert en ce moment', style: context.text.titleMedium?.copyWith(color: c.text)),
+              const SizedBox(height: Space.xs),
+              Text('Voici les prochaines battles et l\'heure d\'ouverture de leur vote.', style: context.text.bodySmall?.copyWith(color: c.textMuted)),
+            ] else
+              Text('À venir', style: context.text.titleMedium?.copyWith(color: c.text)),
+            const SizedBox(height: Space.lg),
+            for (final battle in widget.upcoming) ...[_UpcomingCard(battle: battle), const SizedBox(height: Space.md)],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpcomingCard extends StatelessWidget {
+  const _UpcomingCard({required this.battle});
+
+  final UpcomingBattle battle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final shown = battle.artists.take(4).toList();
+    final more = battle.artists.length - shown.length;
+
+    return Material(
+      color: c.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.lg),
+        side: BorderSide(color: c.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/competitions/${battle.competitionSlug}'),
+        child: Padding(
+          padding: const EdgeInsets.all(Space.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      [battle.competitionName, if (battle.stage != null && !battle.isGroup) battle.stage!].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.labelSmall?.copyWith(color: c.textMuted),
+                    ),
+                  ),
+                  if (battle.isMine) ...[
+                    const SizedBox(width: Space.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 2),
+                      decoration: BoxDecoration(color: c.primary.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(Radii.pill)),
+                      child: Text('Ta battle', style: context.text.labelSmall?.copyWith(color: c.primary)),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: Space.xs),
+              Text(
+                battle.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.titleSmall?.copyWith(color: c.text),
+              ),
+              const SizedBox(height: Space.md),
+              Row(
+                children: [
+                  // Artists, overlapping.
+                  SizedBox(
+                    height: 28,
+                    width: shown.isEmpty ? 0 : 28 + (shown.length - 1) * 18.0,
+                    child: Stack(
+                      children: [
+                        for (final (i, artist) in shown.indexed)
+                          Positioned(
+                            left: i * 18.0,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: c.surface, width: 2),
+                              ),
+                              child: Avatar(name: artist.stageName, url: artist.avatarUrl, size: 24),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (more > 0) Text(' +$more', style: context.text.labelSmall?.copyWith(color: c.textMuted)),
+                  const Spacer(),
+                  Icon(AppIcons.pending, size: 14, color: c.textMuted),
+                  const SizedBox(width: 4),
+                  Text(Labels.voteOpens(battle.opensAt), style: context.text.labelMedium?.copyWith(color: c.text)),
+                ],
+              ),
+              if (battle.submissionsOpen) ...[
+                const SizedBox(height: Space.sm),
+                Text('Envois des prestations en cours', style: context.text.labelSmall?.copyWith(color: c.textMuted)),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

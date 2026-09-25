@@ -26,7 +26,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final shown = ref.watch(currentTabProvider) == 0;
-    final open = ref.watch(battlesProvider).valueOrNull?.data?.length ?? 0;
+    final open = ref.watch(battlesProvider).valueOrNull?.data?.open.length ?? 0;
     return DarkFeed(
       child: Builder(
         builder: (context) => ColoredBox(
