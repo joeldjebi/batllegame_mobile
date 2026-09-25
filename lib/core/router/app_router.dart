@@ -7,6 +7,11 @@ import '../../features/auth/presentation/change_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/verify_phone_screen.dart';
+import '../../features/competitions/presentation/competition_screen.dart';
+import '../../features/competitions/presentation/discover_screen.dart';
+import '../../features/competitions/presentation/match_screen.dart';
+import '../../features/feed/data/feed_item.dart';
+import '../../features/feed/presentation/home_feed_screen.dart';
 import '../../features/jury/presentation/jury_home_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 import '../../features/shell/presentation/tabs.dart';
@@ -45,10 +50,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: '/', builder: (_, _) => const HomeTab())],
+            routes: [GoRoute(path: '/', builder: (_, _) => const HomeFeedScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/decouvrir', builder: (_, _) => const DiscoverTab())],
+            routes: [GoRoute(path: '/decouvrir', builder: (_, _) => const DiscoverScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/publier', builder: (_, _) => const CreateTab())],
@@ -66,6 +71,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth/verification', builder: (_, _) => const VerifyPhoneScreen()),
       GoRoute(path: '/auth/mot-de-passe', builder: (_, _) => const ChangePasswordScreen()),
       GoRoute(path: '/jury', builder: (_, _) => const JuryHomeScreen()),
+      GoRoute(path: '/competitions/:slug', builder: (_, state) => CompetitionScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(
+        path: '/competitions/:slug/prestations',
+        builder: (_, state) => CompetitionFeedScreen(slug: state.pathParameters['slug']!, title: state.uri.queryParameters['titre']),
+      ),
+      GoRoute(
+        path: '/competitions/:slug/matchs/:id',
+        builder: (_, state) => MatchScreen(slug: state.pathParameters['slug']!, id: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/lecture',
+        builder: (_, state) {
+          final args = state.extra! as ({String key, MediaInfo media, String? title});
+          return PlayerScreen(cacheKey: args.key, media: args.media, title: args.title);
+        },
+      ),
     ],
   );
 });

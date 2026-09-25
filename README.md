@@ -14,7 +14,10 @@ flutter run --dart-define=API_URL=http://127.0.0.1:8000   # backend local (php a
 
 - `API_URL` : racine du backend, sans `/api` (défaut : le serveur de test `http://185.215.167.87:8081`).
 - `START` (développement) : écran d'ouverture, ex. `--dart-define=START=/auth/connexion`.
-- Tests : `flutter test` ; parcours réel sur simulateur : `flutter test integration_test -d <simulateur>
+- **Vidéos en local** : `php artisan serve` ne gère ni les requêtes `Range` (exigées par le lecteur iOS) ni plusieurs
+  requêtes à la fois. Servir `backend/public` avec un serveur de fichiers compatible `Range` sur le port 8001 et lancer
+  l'API avec `APP_URL=http://127.0.0.1:8001 PHP_CLI_SERVER_WORKERS=4 php artisan serve` (en production : nginx / Wasabi).
+- Tests : `flutter test` ; parcours réels sur simulateur (`login_flow`, `feed_flow`, `like_flow`) : `flutter test integration_test -d <simulateur>
   --dart-define=API_URL=http://127.0.0.1:8000` (compte artiste de démo `0799000001` / `12345678`).
 - Version de production Android : `flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols`.
 
@@ -34,6 +37,8 @@ lib/
 | Affichage | `watchResource()` : copie locale immédiate, puis réponse du serveur (même hors ligne) |
 | Hors ligne | `Outbox` : écritures en file, envoyées dans l'ordre avec `Idempotency-Key`, reprise progressive |
 | Base locale | Drift (SQLite) : cache HTTP, file d'actions, valeurs (profil, appareil) |
+| Fil | `FeedController` (curseur, copie locale, likes optimistes via la file) + `VideoPool` (≤ 4 lecteurs, lecture depuis le disque, préchargement en Wi-Fi) |
+| Médias | `MediaCache` : vidéos et miniatures sur disque par identifiant **avec l'extension** (iOS l'exige), 500 Mo, les plus anciennes effacées |
 | Session | `SessionController` : profil en cache au démarrage, jeton dans le coffre (Keychain / Keystore) |
 | Navigation | go_router : onglets `StatefulShellRoute`, redirections (mot de passe provisoire, jury) |
 

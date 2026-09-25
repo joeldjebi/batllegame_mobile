@@ -9,42 +9,6 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/logo.dart';
-
-/// Accueil: the « Pour toi » video feed (phase 2).
-class HomeTab extends StatelessWidget {
-  const HomeTab({super.key});
-
-  @override
-  Widget build(BuildContext context) => const SafeArea(
-    child: Column(
-      children: [
-        Padding(padding: EdgeInsets.all(Space.lg), child: Logo()),
-        Expanded(
-          child: EmptyState(
-            icon: AppIcons.feed,
-            title: 'Le fil « Pour toi » arrive',
-            message: 'Les prestations des artistes défileront ici, en plein écran.',
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-/// Découvrir: competitions (phase 2).
-class DiscoverTab extends StatelessWidget {
-  const DiscoverTab({super.key});
-
-  @override
-  Widget build(BuildContext context) => const SafeArea(
-    child: EmptyState(
-      icon: AppIcons.trophy,
-      title: 'Les compétitions',
-      message: 'En cours, inscriptions ouvertes, terminées : bientôt ici.',
-    ),
-  );
-}
 
 /// Publier: send a performance (phase 3). Needs an account.
 class CreateTab extends ConsumerWidget {

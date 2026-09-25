@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/providers.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -8,7 +11,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/offline_banner.dart';
 
 /// Five tabs, the TikTok way: Accueil · Découvrir · + · Activité · Profil.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
@@ -22,8 +25,12 @@ class AppShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    // The feed plays only while its tab is shown.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(currentTabProvider) != shell.currentIndex) ref.read(currentTabProvider.notifier).state = shell.currentIndex;
+    });
     return Scaffold(
       body: Column(
         children: [

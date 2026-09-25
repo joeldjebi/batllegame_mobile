@@ -97,7 +97,9 @@ class Outbox {
       _again = true;
       return _current!;
     }
-    return _current = _drain().whenComplete(() => _current = null);
+    return _current = _drain().whenComplete(() {
+      _current = null;
+    });
   }
 
   Future<void> _drain() async {

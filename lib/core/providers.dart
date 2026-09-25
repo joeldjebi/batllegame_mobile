@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../features/auth/data/models.dart';
 import '../features/auth/data/session.dart';
+import 'media/media_cache.dart';
 import 'network/api_client.dart';
 import 'network/resource.dart';
 import 'offline/network_status.dart';
@@ -81,3 +82,9 @@ final countriesProvider = StreamProvider<Resource<List<Country>>>(
         .toList(),
   ),
 );
+
+/// Videos and posters on disk (500 Mo, least recently used first).
+final mediaCacheProvider = Provider<MediaCache>((ref) => MediaCache());
+
+/// Tab shown by the shell (0 = Accueil): the feed only plays when visible.
+final currentTabProvider = StateProvider<int>((ref) => 0);
