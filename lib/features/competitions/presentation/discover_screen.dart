@@ -133,7 +133,8 @@ class _Segmented extends StatelessWidget {
   }
 }
 
-/// One competition, as a row of a grouped section: logo, name, organizer, status and date.
+/// One competition, as a row of a grouped section: logo, name, organizer, then its
+/// status, discipline and price as three small tags, and the registration deadline.
 class CompetitionCard extends StatelessWidget {
   const CompetitionCard({super.key, required this.competition});
 
@@ -144,46 +145,87 @@ class CompetitionCard extends StatelessWidget {
     final c = context.colors;
     final (label, color) = switch (competition.status) {
       'en_cours' => ('En cours', c.like),
-      'inscriptions' => ('Inscriptions ouvertes', c.success),
+      'inscriptions' => ('Inscriptions', c.success),
       'terminee' => ('Terminée', c.textMuted),
       _ => (Labels.competitionStatus(competition.status), c.textMuted),
     };
-    final details = [
-      Labels.discipline(competition.discipline),
-      competition.entryFee > 0 ? Labels.money(competition.entryFee, competition.currency) : 'Gratuit',
-      if (competition.registrationOpen && competition.registrationEndsAt != null)
-        'jusqu\'au ${DateFormat('d MMM', 'fr').format(competition.registrationEndsAt!.toLocal())}',
-    ].join(' · ');
-    final small = context.text.bodySmall;
+    final free = competition.entryFee <= 0;
+    final deadline = competition.registrationOpen && competition.registrationEndsAt != null
+        ? 'Inscriptions jusqu\'au ${DateFormat('d MMMM', 'fr').format(competition.registrationEndsAt!.toLocal())}'
+        : null;
 
     return GroupedTile(
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(Radii.md),
-        child: Avatar(name: competition.organizerName ?? competition.name, url: competition.organizerLogoUrl, size: 44),
+        child: Avatar(name: competition.organizerName ?? competition.name, url: competition.organizerLogoUrl, size: 48),
       ),
       title: competition.name,
       subtitle: competition.organizerName,
-      detail: Text.rich(
-        TextSpan(
+      detail: Padding(
+        padding: const EdgeInsets.only(top: Space.xs),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextSpan(
-              text: '● ',
-              style: small?.copyWith(color: color, fontSize: 9),
+            Wrap(
+              spacing: Space.xs,
+              runSpacing: Space.xs,
+              children: [
+                _Tag(label: label, color: color, dot: true),
+                _Tag(label: Labels.discipline(competition.discipline), icon: AppIcons.microphone),
+                _Tag(
+                  label: free ? 'Gratuit' : Labels.money(competition.entryFee, competition.currency),
+                  color: free ? c.success : null,
+                  icon: AppIcons.payment,
+                ),
+              ],
             ),
-            TextSpan(
-              text: label,
-              style: small?.copyWith(color: color, fontWeight: FontWeight.w600),
-            ),
-            TextSpan(
-              text: '  ·  $details',
-              style: small?.copyWith(color: c.textMuted),
-            ),
+            if (deadline != null) ...[const SizedBox(height: Space.xs), Text(deadline, style: context.text.labelSmall?.copyWith(color: c.textMuted))],
           ],
         ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
       ),
       onTap: () => context.push('/competitions/${competition.slug}'),
+    );
+  }
+}
+
+/// Small tag: tinted when it carries a color (status, free), grey otherwise.
+class _Tag extends StatelessWidget {
+  const _Tag({required this.label, this.color, this.icon, this.dot = false});
+
+  final String label;
+  final Color? color;
+  final IconData? icon;
+  final bool dot;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final fg = color ?? c.textMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: (color ?? c.textMuted).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(Radii.pill)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot) ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+          ],
+          if (icon != null && !dot) ...[Icon(icon, size: 12, color: fg), const SizedBox(width: 4)],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
@@ -12,6 +13,38 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/toast.dart';
 import '../data/models.dart';
+
+/// No photo yet: explains why it is needed and opens the profile to add it.
+Future<void> askForPhoto(BuildContext context) async {
+  final add = await showModalBottomSheet<bool>(
+    context: context,
+    builder: (sheet) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Icon(AppIcons.profile, size: 40, color: sheet.colors.primary),
+            const SizedBox(height: Space.md),
+            Text('Ajoute ta photo de profil', textAlign: TextAlign.center, style: sheet.text.titleLarge),
+            const SizedBox(height: Space.xs),
+            Text(
+              'Elle est obligatoire pour envoyer une prestation : elle te représente auprès du public et du jury.',
+              textAlign: TextAlign.center,
+              style: sheet.text.bodyMedium?.copyWith(color: sheet.colors.textMuted),
+            ),
+            const SizedBox(height: Space.xl),
+            AppButton(label: 'Ajouter ma photo', icon: AppIcons.camera, onPressed: () => Navigator.pop(sheet, true)),
+            const SizedBox(height: Space.md),
+            AppButton(label: 'Plus tard', variant: AppButtonVariant.secondary, onPressed: () => Navigator.pop(sheet, false)),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (add == true && context.mounted) await context.push('/profil/modifier');
+}
 
 /// Film or pick the performance, check it against the rules on the phone (no
 /// useless upload), then send it in the background.
@@ -27,6 +60,12 @@ Future<void> submitPerformance(
     showToast(context, 'Cette étape attend un fichier audio : envoi depuis le site pour l\'instant.');
     return;
   }
+  // Every performance is shown with the artist's photo: required before the upload
+  // (the server refuses it too, reason « avatar_required »).
+  if (ref.read(currentUserProvider)?.avatarUrl == null) {
+    await askForPhoto(context);
+    return;
+  }
   final source = await showModalBottomSheet<ImageSource>(
     context: context,
     builder: (sheet) => SafeArea(
@@ -38,11 +77,20 @@ Future<void> submitPerformance(
           children: [
             Text('Ta prestation', textAlign: TextAlign.center, style: sheet.text.titleLarge),
             const SizedBox(height: Space.xs),
-            Text(rules.summary, textAlign: TextAlign.center, style: sheet.text.bodyMedium?.copyWith(color: sheet.colors.textMuted)),
+            Text(
+              rules.summary,
+              textAlign: TextAlign.center,
+              style: sheet.text.bodyMedium?.copyWith(color: sheet.colors.textMuted),
+            ),
             const SizedBox(height: Space.xl),
             AppButton(label: 'Filmer maintenant', icon: AppIcons.video, onPressed: () => Navigator.pop(sheet, ImageSource.camera)),
             const SizedBox(height: Space.md),
-            AppButton(label: 'Choisir une vidéo', variant: AppButtonVariant.secondary, icon: AppIcons.gallery, onPressed: () => Navigator.pop(sheet, ImageSource.gallery)),
+            AppButton(
+              label: 'Choisir une vidéo',
+              variant: AppButtonVariant.secondary,
+              icon: AppIcons.gallery,
+              onPressed: () => Navigator.pop(sheet, ImageSource.gallery),
+            ),
           ],
         ),
       ),
@@ -52,7 +100,10 @@ Future<void> submitPerformance(
 
   final XFile? picked;
   try {
-    picked = await ImagePicker().pickVideo(source: source, maxDuration: Duration(seconds: rules.maxDurationSeconds));
+    picked = await ImagePicker().pickVideo(
+      source: source,
+      maxDuration: Duration(seconds: rules.maxDurationSeconds),
+    );
   } catch (_) {
     if (context.mounted) showToast(context, 'Accès à la caméra ou aux vidéos refusé : autorise-le dans les réglages.');
     return;
@@ -113,7 +164,11 @@ Future<({String? error, Duration? duration, int bytes})> checkVideo(File file, M
     final duration = player.value.duration;
     // A little tolerance for encoders rounding the duration (same as the server).
     if (duration.inSeconds > rules.maxDurationSeconds + 2) {
-      return (error: 'Vidéo trop longue (${_clock(duration)}) : ${_clock(Duration(seconds: rules.maxDurationSeconds))} maximum.', duration: duration, bytes: bytes);
+      return (
+        error: 'Vidéo trop longue (${_clock(duration)}) : ${_clock(Duration(seconds: rules.maxDurationSeconds))} maximum.',
+        duration: duration,
+        bytes: bytes,
+      );
     }
     return (error: null, duration: duration, bytes: bytes);
   } catch (_) {
