@@ -9,9 +9,12 @@ import '../../../core/utils/labels.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/live_channel.dart';
 import '../../../core/widgets/resource_view.dart';
 import '../../../core/widgets/rich_html.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../artist/data/providers.dart';
+import '../../artist/presentation/registration.dart';
 import '../data/models.dart';
 import '../data/providers.dart';
 
@@ -28,21 +31,24 @@ class CompetitionScreen extends ConsumerWidget {
       body: ResourceView(
         value: value,
         onRetry: () => ref.invalidate(competitionProvider(slug)),
-        builder: (competition, _) => DefaultTabController(
-          length: 4,
-          child: NestedScrollView(
-            headerSliverBuilder: (context, _) => [
-              SliverAppBar(pinned: true, title: Text(competition.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
-              SliverToBoxAdapter(child: _Header(competition: competition)),
-              SliverPersistentHeader(pinned: true, delegate: _TabsHeader(context.colors)),
-            ],
-            body: TabBarView(
-              children: [
-                _Presentation(competition: competition),
-                _Schedule(competition: competition),
-                _Phases(competition: competition),
-                _Regulations(competition: competition),
+        builder: (competition, _) => LiveChannel(
+          channel: 'competition.${competition.id}',
+          child: DefaultTabController(
+            length: 4,
+            child: NestedScrollView(
+              headerSliverBuilder: (context, _) => [
+                SliverAppBar(pinned: true, title: Text(competition.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                SliverToBoxAdapter(child: _Header(competition: competition)),
+                SliverPersistentHeader(pinned: true, delegate: _TabsHeader(context.colors)),
               ],
+              body: TabBarView(
+                children: [
+                  _Presentation(competition: competition),
+                  _Schedule(competition: competition),
+                  _Phases(competition: competition),
+                  _Regulations(competition: competition),
+                ],
+              ),
             ),
           ),
         ),
@@ -78,7 +84,13 @@ class _Header extends StatelessWidget {
             children: [
               StatusChip(Labels.competitionStatus(competition.status), tone: competition.status == 'en_cours' ? ChipTone.live : ChipTone.info),
               StatusChip(Labels.discipline(competition.discipline)),
-              StatusChip(competition.mode == 'presentiel' ? 'Sur scène' : competition.mode == 'mixte' ? 'En ligne et sur scène' : 'En ligne'),
+              StatusChip(
+                competition.mode == 'presentiel'
+                    ? 'Sur scène'
+                    : competition.mode == 'mixte'
+                    ? 'En ligne et sur scène'
+                    : 'En ligne',
+              ),
               StatusChip(Labels.money(competition.entryFee, competition.currency)),
               if (competition.locationLabel != null) StatusChip(competition.locationLabel!),
             ],
@@ -86,18 +98,41 @@ class _Header extends StatelessWidget {
           if (competition.registrationOpen) ...[
             const SizedBox(height: Space.md),
             Text(
-              competition.registrationEndsAt == null ? 'Inscriptions ouvertes' : 'Inscriptions ouvertes jusqu\'au ${Labels.day(competition.registrationEndsAt)}',
+              competition.registrationEndsAt == null
+                  ? 'Inscriptions ouvertes'
+                  : 'Inscriptions ouvertes jusqu\'au ${Labels.day(competition.registrationEndsAt)}',
               style: context.text.bodyMedium?.copyWith(color: c.accent, fontWeight: FontWeight.w600),
             ),
           ],
           const SizedBox(height: Space.lg),
+          _ArtistAction(competition: competition),
           AppButton(
             label: 'Voir les prestations',
             icon: AppIcons.feed,
+            variant: AppButtonVariant.secondary,
             onPressed: () => context.push('/competitions/${competition.slug}/prestations?titre=${Uri.encodeComponent(competition.name)}'),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// « Mon parcours » for an artist of the competition, « Participer » while registrations are open.
+class _ArtistAction extends ConsumerWidget {
+  const _ArtistAction({required this.competition});
+
+  final CompetitionDetail competition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mine = ref.watch(participationsProvider).valueOrNull?.data?.any((p) => p.slug == competition.slug) ?? false;
+    if (!mine && !competition.registrationOpen) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.md),
+      child: mine
+          ? AppButton(label: 'Mon parcours', icon: AppIcons.journey, onPressed: () => context.push('/competitions/${competition.slug}/parcours'))
+          : AppButton(label: 'Participer', icon: AppIcons.microphone, onPressed: () => startRegistration(context, ref, competition)),
     );
   }
 }
@@ -115,18 +150,23 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => ColoredBox(
-        color: colors.background,
-        child: TabBar(
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          labelColor: colors.text,
-          unselectedLabelColor: colors.textMuted,
-          indicatorColor: colors.primary,
-          dividerColor: colors.border,
-          labelStyle: context.text.labelLarge,
-          tabs: const [Tab(text: 'Présentation'), Tab(text: 'Programme'), Tab(text: 'Phases'), Tab(text: 'Règlement')],
-        ),
-      );
+    color: colors.background,
+    child: TabBar(
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      labelColor: colors.text,
+      unselectedLabelColor: colors.textMuted,
+      indicatorColor: colors.primary,
+      dividerColor: colors.border,
+      labelStyle: context.text.labelLarge,
+      tabs: const [
+        Tab(text: 'Présentation'),
+        Tab(text: 'Programme'),
+        Tab(text: 'Phases'),
+        Tab(text: 'Règlement'),
+      ],
+    ),
+  );
 
   @override
   bool shouldRebuild(_TabsHeader old) => old.colors != colors;
@@ -152,7 +192,11 @@ class _Presentation extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(bottom: Space.sm),
               padding: const EdgeInsets.all(Space.lg),
-              decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.lg), border: Border.all(color: c.border)),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(Radii.lg),
+                border: Border.all(color: c.border),
+              ),
               child: Row(
                 children: [
                   Icon(AppIcons.trophy, color: c.warning),
@@ -203,7 +247,11 @@ class _Schedule extends StatelessWidget {
                     width: 14,
                     height: 14,
                     margin: const EdgeInsets.only(top: 4),
-                    decoration: BoxDecoration(color: past ? c.success : c.surfaceRaised, shape: BoxShape.circle, border: Border.all(color: past ? c.success : c.primary, width: 2)),
+                    decoration: BoxDecoration(
+                      color: past ? c.success : c.surfaceRaised,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: past ? c.success : c.primary, width: 2),
+                    ),
                   ),
                   if (i < competition.schedule.length - 1) Expanded(child: Container(width: 2, color: c.border)),
                 ],
@@ -251,7 +299,10 @@ class _PhasesState extends ConsumerState<_Phases> {
     if (phases.isEmpty) {
       return const EmptyState(icon: AppIcons.trophy, title: 'Phases bientôt annoncées', message: 'L\'organisateur prépare les poules et le tableau.');
     }
-    final phase = phases.firstWhere((p) => p.id == _phase, orElse: () => phases.firstWhere((p) => p.status == 'en_cours', orElse: () => phases.first));
+    final phase = phases.firstWhere(
+      (p) => p.id == _phase,
+      orElse: () => phases.firstWhere((p) => p.status == 'en_cours', orElse: () => phases.first),
+    );
     final key = (slug: widget.competition.slug, phase: phase.id);
     final c = context.colors;
 
@@ -292,7 +343,8 @@ class _PhasesState extends ConsumerState<_Phases> {
                     padding: const EdgeInsets.all(Space.gutter),
                     itemCount: matches.length,
                     separatorBuilder: (_, _) => const SizedBox(height: Space.md),
-                    itemBuilder: (context, i) => MatchCard(slug: widget.competition.slug, match: matches[i], showRound: i == 0 || matches[i - 1].stage != matches[i].stage),
+                    itemBuilder: (context, i) =>
+                        MatchCard(slug: widget.competition.slug, match: matches[i], showRound: i == 0 || matches[i - 1].stage != matches[i].stage),
                   ),
           ),
         ),
@@ -327,14 +379,29 @@ class MatchCard extends StatelessWidget {
             onTap: () => context.push('/competitions/$slug/matchs/${match.id}'),
             child: Container(
               padding: const EdgeInsets.all(Space.lg),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(Radii.lg), border: Border.all(color: match.votingOpen ? c.primary : c.border)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Radii.lg),
+                border: Border.all(color: match.votingOpen ? c.primary : c.border),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Expanded(child: Text(match.isGroup ? (match.group ?? match.title) : 'Battle', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
-                      StatusChip(Labels.matchStatus(match.status), tone: match.votingOpen ? ChipTone.live : match.status == 'cloture' ? ChipTone.success : ChipTone.neutral),
+                      Expanded(
+                        child: Text(
+                          match.isGroup ? (match.group ?? match.title) : 'Battle',
+                          style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      StatusChip(
+                        Labels.matchStatus(match.status),
+                        tone: match.votingOpen
+                            ? ChipTone.live
+                            : match.status == 'cloture'
+                            ? ChipTone.success
+                            : ChipTone.neutral,
+                      ),
                     ],
                   ),
                   const SizedBox(height: Space.md),
@@ -359,13 +426,19 @@ class MatchCard extends StatelessWidget {
                           if (slot.rank != null) Text('${slot.rank}e', style: context.text.labelMedium?.copyWith(color: c.textMuted)),
                           if (slot.finalScore != null) ...[
                             const SizedBox(width: Space.md),
-                            Text(slot.finalScore!.toStringAsFixed(1).replaceAll('.', ','), style: context.text.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+                            Text(
+                              slot.finalScore!.toStringAsFixed(1).replaceAll('.', ','),
+                              style: context.text.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                            ),
                           ],
                         ],
                       ),
                     ),
                   if (match.votingOpen && match.votingClosesAt != null)
-                    Text('Vote ouvert · ferme ${Labels.remaining(match.votingClosesAt!)}', style: context.text.bodySmall?.copyWith(color: c.accent, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Vote ouvert · ferme ${Labels.remaining(match.votingClosesAt!)}',
+                      style: context.text.bodySmall?.copyWith(color: c.accent, fontWeight: FontWeight.w600),
+                    ),
                 ],
               ),
             ),

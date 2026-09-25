@@ -80,6 +80,17 @@ class MediaCache {
     }
   }
 
+  /// Bytes on disk (Réglages).
+  Future<int> size() async {
+    final root = await _root;
+    if (!await root.exists()) return 0;
+    var total = 0;
+    await for (final entity in root.list()) {
+      if (entity is File) total += await entity.length();
+    }
+    return total;
+  }
+
   /// Settings › free space.
   Future<void> clear() async {
     final root = await _root;

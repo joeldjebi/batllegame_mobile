@@ -1,3 +1,4 @@
+import 'package:battlegame/core/theme/app_icons.dart';
 import 'package:battlegame/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,7 +30,7 @@ void main() {
     await shot(tester, 'feed-2');
 
     // Competition chip of the current performance.
-    await tester.tap(find.byIcon(Icons.emoji_events_outlined).last);
+    await tester.tap(find.byIcon(AppIcons.trophy).last);
     await settle(tester, 4);
     await shot(tester, 'competition');
 

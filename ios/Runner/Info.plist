@@ -7,6 +7,12 @@
 	<key>CFBundleDisplayName</key>
 	<string>Battle Game</string>
 	<!-- Test server over HTTP (IP address): remove once the API has a domain with HTTPS. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Battle Game utilise la caméra pour filmer tes prestations et ta photo de profil.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Battle Game utilise le micro pour enregistrer le son de tes prestations.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Battle Game accède à tes vidéos et photos pour envoyer une prestation ou choisir ta photo de profil.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

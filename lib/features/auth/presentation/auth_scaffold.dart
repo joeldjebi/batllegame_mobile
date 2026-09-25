@@ -31,35 +31,34 @@ class AuthScaffold extends StatelessWidget {
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                      Space.gutter,
-                      MediaQuery.paddingOf(context).top + Space.md,
-                      Space.gutter,
-                      Space.xl,
-                    ),
-                    sliver: SliverList.list(
-                      children: [
-                        Row(
-                          children: [
-                            const Logo(size: 30),
-                            const Spacer(),
-                            if (canClose)
-                              IconButton(
-                                tooltip: 'Fermer',
-                                onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-                                icon: Icon(AppIcons.close, color: c.textMuted),
-                              ),
+                    padding: EdgeInsets.fromLTRB(Space.gutter, MediaQuery.paddingOf(context).top + Space.md, Space.gutter, Space.xl),
+                    sliver: SliverToBoxAdapter(
+                      // One block (not a lazy list): every field exists, for the password autofill
+                      // and when the keyboard scrolls the form.
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(child: Align(alignment: Alignment.centerLeft, child: Logo())),
+                              if (canClose)
+                                IconButton(
+                                  tooltip: 'Fermer',
+                                  onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+                                  icon: Icon(AppIcons.close, color: c.textMuted),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: Space.xxl),
+                          Text(title, style: context.text.headlineMedium),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: Space.sm),
+                            Text(subtitle!, style: context.text.bodyLarge?.copyWith(color: c.textMuted)),
                           ],
-                        ),
-                        const SizedBox(height: Space.xxl),
-                        Text(title, style: context.text.headlineMedium),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: Space.sm),
-                          Text(subtitle!, style: context.text.bodyLarge?.copyWith(color: c.textMuted)),
+                          const SizedBox(height: Space.xxl),
+                          ...children,
                         ],
-                        const SizedBox(height: Space.xxl),
-                        ...children,
-                      ],
+                      ),
                     ),
                   ),
                   if (footer != null)

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -6,8 +7,11 @@ import '../features/auth/data/session.dart';
 import 'media/media_cache.dart';
 import 'network/api_client.dart';
 import 'network/resource.dart';
+import 'notifications/local_notifier.dart';
 import 'offline/network_status.dart';
 import 'offline/outbox.dart';
+import 'offline/uploads.dart';
+import 'realtime/realtime_client.dart';
 import 'storage/database.dart';
 import 'storage/token_store.dart';
 
@@ -88,3 +92,60 @@ final mediaCacheProvider = Provider<MediaCache>((ref) => MediaCache());
 
 /// Tab shown by the shell (0 = Accueil): the feed only plays when visible.
 final currentTabProvider = StateProvider<int>((ref) => 0);
+
+/// Target of the last performance received by the server (journeys refresh themselves).
+final lastUploadDoneProvider = StateProvider<String?>((ref) => null);
+
+/// Background uploads of performances (started in main()).
+final uploadsProvider = StateNotifierProvider<UploadCenter, Map<String, UploadState>>((ref) => UploadCenter(
+      tokens: ref.read(tokenStoreProvider),
+      onFinished: (target) => ref.read(lastUploadDoneProvider.notifier).state = '$target@${DateTime.now().millisecondsSinceEpoch}',
+    ));
+
+final localNotifierProvider = Provider<LocalNotifier>((ref) => LocalNotifier());
+
+final realtimeClientProvider = Provider<RealtimeClient>((ref) {
+  final client = RealtimeClient(ref.read(apiClientProvider));
+  ref.onDispose(client.dispose);
+  return client;
+});
+
+enum PrefetchMode { wifi, always, never }
+
+/// When the feed saves the next videos to disk (data saver).
+class PrefetchPreference extends StateNotifier<PrefetchMode> {
+  PrefetchPreference(this._db) : super(PrefetchMode.wifi) {
+    _db.readValue(_key).then((value) {
+      if (mounted && value != null) state = PrefetchMode.values.firstWhere((m) => m.name == value, orElse: () => PrefetchMode.wifi);
+    });
+  }
+
+  final AppDatabase _db;
+  static const String _key = 'prefetch_mode';
+
+  Future<void> set(PrefetchMode mode) async {
+    state = mode;
+    await _db.writeValue(_key, mode.name);
+  }
+}
+
+final prefetchModeProvider = StateNotifierProvider<PrefetchPreference, PrefetchMode>((ref) => PrefetchPreference(ref.read(databaseProvider)));
+
+/// Appearance chosen in Réglages: light by default.
+class ThemePreference extends StateNotifier<ThemeMode> {
+  ThemePreference(this._db) : super(ThemeMode.light) {
+    _db.readValue(_key).then((value) {
+      if (mounted && value != null) state = ThemeMode.values.firstWhere((m) => m.name == value, orElse: () => ThemeMode.light);
+    });
+  }
+
+  final AppDatabase _db;
+  static const String _key = 'theme_mode';
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    await _db.writeValue(_key, mode.name);
+  }
+}
+
+final themeModeProvider = StateNotifierProvider<ThemePreference, ThemeMode>((ref) => ThemePreference(ref.read(databaseProvider)));

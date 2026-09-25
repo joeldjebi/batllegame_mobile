@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 
 enum AppButtonVariant { primary, secondary, ghost, danger }
 
-/// The app's button: 52 pt high (comfortable touch target), press feedback,
+/// The app's button: 46 pt high (comfortable touch target), press feedback,
 /// loading state that keeps its width, haptic tick on primary actions.
 class AppButton extends StatefulWidget {
   const AppButton({
@@ -50,9 +51,9 @@ class _AppButtonState extends State<AppButton> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (widget.loading)
-          SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: fg))
+          SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
         else ...[
-          if (widget.icon != null) ...[Icon(widget.icon, size: 20, color: fg), const SizedBox(width: Space.sm)],
+          if (widget.icon != null) ...[Icon(widget.icon, size: 18, color: fg), const SizedBox(width: Space.sm)],
           Flexible(
             child: Text(
               widget.label,
@@ -82,13 +83,13 @@ class _AppButtonState extends State<AppButton> {
             : null,
         child: AnimatedScale(
           scale: _pressed ? 0.97 : 1,
-          duration: Motion.fast,
+          duration: context.motion(Motion.fast),
           curve: Motion.enter,
           child: AnimatedOpacity(
             opacity: widget.onPressed == null ? 0.45 : 1,
-            duration: Motion.fast,
+            duration: context.motion(Motion.fast),
             child: Container(
-              height: 52,
+              height: 46,
               padding: const EdgeInsets.symmetric(horizontal: Space.xl),
               decoration: BoxDecoration(
                 color: bg,

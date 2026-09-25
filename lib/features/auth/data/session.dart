@@ -126,6 +126,9 @@ class SessionController extends StateNotifier<SessionState> {
     await _clear();
   }
 
+  /// Profile updated elsewhere (photo, name).
+  Future<void> replaceUser(User user) => _store(user);
+
   /// The server refused the token (revoked, expired).
   Future<void> expire() => _clear();
 

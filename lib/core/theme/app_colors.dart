@@ -23,8 +23,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.scrim,
   });
 
-  /// Fans and artists: immersive dark (OLED), the video comes first.
-  static const AppColors fan = AppColors(
+  /// Dark theme (and always the video feed): deep neutral, the video comes first.
+  static const AppColors dark = AppColors(
     background: Color(0xFF09090F),
     surface: Color(0xFF14141D),
     surfaceRaised: Color(0xFF1E1E2A),
@@ -41,8 +41,8 @@ class AppColors extends ThemeExtension<AppColors> {
     scrim: Color(0x99000000),
   );
 
-  /// Jury: clear, calm, professional.
-  static const AppColors jury = AppColors(
+  /// Light theme, the default: clear, calm, professional.
+  static const AppColors light = AppColors(
     background: Color(0xFFF8FAFC),
     surface: Color(0xFFFFFFFF),
     surfaceRaised: Color(0xFFF1F5F9),

@@ -64,7 +64,7 @@ class _VerifyPhoneScreenState extends ConsumerState<VerifyPhoneScreen> {
       await ref.read(sessionProvider.notifier).verifyCode(_code.text);
       unawaited(HapticFeedback.mediumImpact());
       if (mounted) {
-        showToast(context, 'Numéro vérifié. Tu peux voter !');
+        showToast(context, 'Numéro vérifié.');
         context.go('/');
       }
     } on ApiException catch (e) {

@@ -5,13 +5,13 @@ class MediaInfo {
   const MediaInfo({required this.type, this.url, this.posterUrl, this.width, this.height, this.durationSeconds});
 
   factory MediaInfo.fromJson(Map<String, dynamic> json) => MediaInfo(
-        type: (json['type'] as String?) ?? 'video',
-        url: json['url'] as String?,
-        posterUrl: json['poster_url'] as String?,
-        width: json['width'] as int?,
-        height: json['height'] as int?,
-        durationSeconds: json['duration_seconds'] as int?,
-      );
+    type: (json['type'] as String?) ?? 'video',
+    url: json['url'] as String?,
+    posterUrl: json['poster_url'] as String?,
+    width: json['width'] as int?,
+    height: json['height'] as int?,
+    durationSeconds: json['duration_seconds'] as int?,
+  );
 
   final String type;
   final String? url;
@@ -29,12 +29,8 @@ class MediaInfo {
 class FeedLikes {
   const FeedLikes({required this.enabled, required this.open, required this.liked, this.count});
 
-  factory FeedLikes.fromJson(Map<String, dynamic> json) => FeedLikes(
-        enabled: json['enabled'] == true,
-        open: json['open'] == true,
-        liked: json['liked'] == true,
-        count: json['count'] as int?,
-      );
+  factory FeedLikes.fromJson(Map<String, dynamic> json) =>
+      FeedLikes(enabled: json['enabled'] == true, open: json['open'] == true, liked: json['liked'] == true, count: json['count'] as int?);
 
   final bool enabled;
   final bool open;
@@ -121,20 +117,20 @@ class FeedItem {
   bool get isEntry => kind == 'preselection';
 
   FeedItem withLikes(FeedLikes likes) => FeedItem(
-        key: key,
-        kind: kind,
-        id: id,
-        media: media,
-        participantId: participantId,
-        stageName: stageName,
-        avatarUrl: avatarUrl,
-        competitionSlug: competitionSlug,
-        competitionName: competitionName,
-        discipline: discipline,
-        contextLabel: contextLabel,
-        matchId: matchId,
-        likes: likes,
-        vote: vote,
-        shareUrl: shareUrl,
-      );
+    key: key,
+    kind: kind,
+    id: id,
+    media: media,
+    participantId: participantId,
+    stageName: stageName,
+    avatarUrl: avatarUrl,
+    competitionSlug: competitionSlug,
+    competitionName: competitionName,
+    discipline: discipline,
+    contextLabel: contextLabel,
+    matchId: matchId,
+    likes: likes,
+    vote: vote,
+    shareUrl: shareUrl,
+  );
 }

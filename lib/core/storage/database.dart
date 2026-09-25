@@ -36,6 +36,19 @@ class OutboxActions extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Notifications of the account (Activité tab), kept offline.
+class ActivityItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get account => text()();
+  TextColumn get type => text()();
+  TextColumn get message => text()();
+
+  /// Screen to open (go_router location), when there is one.
+  TextColumn get link => text().nullable()();
+  BoolColumn get read => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
 /// Small persistent values (device id, cached profile).
 class KeyValues extends Table {
   TextColumn get key => text()();
@@ -45,12 +58,20 @@ class KeyValues extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [HttpCacheEntries, OutboxActions, KeyValues])
+@DriftDatabase(tables: [HttpCacheEntries, OutboxActions, KeyValues, ActivityItems])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'battlegame'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.createTable(activityItems);
+        },
+      );
 
   Future<String?> readValue(String key) =>
       (select(keyValues)..where((t) => t.key.equals(key))).map((row) => row.value).getSingleOrNull();
@@ -64,5 +85,6 @@ class AppDatabase extends _$AppDatabase {
   Future<void> forgetAccount(String account) async {
     await (delete(httpCacheEntries)..where((t) => t.key.like('$account|%'))).go();
     await (delete(outboxActions)..where((t) => t.account.equals(account))).go();
+    await (delete(activityItems)..where((t) => t.account.equals(account))).go();
   }
 }

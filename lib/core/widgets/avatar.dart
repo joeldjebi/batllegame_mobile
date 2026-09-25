@@ -5,7 +5,7 @@ import '../theme/brand.dart';
 
 /// Round photo, or the initials on the brand color while it loads / when there is none.
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, required this.name, this.url, this.size = 44});
+  const Avatar({super.key, required this.name, this.url, this.size = 40});
 
   final String name;
   final String? url;
@@ -29,9 +29,8 @@ class Avatar extends StatelessWidget {
     );
     final dpr = MediaQuery.devicePixelRatioOf(context);
 
-    return Semantics(
-      label: 'Photo de $name',
-      image: true,
+    // Always shown next to the name: decorative for screen readers.
+    return ExcludeSemantics(
       child: ClipOval(
         child: SizedBox.square(
           dimension: size,

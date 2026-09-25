@@ -19,7 +19,7 @@ void main() {
           networkStatusProvider.overrideWith((ref) => NetworkStatus(changes: const Stream.empty())),
           pendingActionsProvider.overrideWith((ref) => Stream.value(0)),
         ],
-        child: MaterialApp(theme: AppTheme.fan(), home: const LoginScreen()),
+        child: MaterialApp(theme: AppTheme.light(), home: const LoginScreen()),
       ),
     );
     await tester.pumpAndSettle();

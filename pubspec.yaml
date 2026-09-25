@@ -45,6 +45,11 @@ dependencies:
     sdk: flutter
   video_player: ^2.11.1
   share_plus: ^13.3.0
+  image_picker: ^1.2.3
+  background_downloader: ^9.5.9
+  socket_io_client: ^3.1.6
+  flutter_local_notifications: ^22.3.1
+  timezone: ^0.11.1
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +85,12 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter-700.ttf
           weight: 700
+    - family: PhosphorRegular
+      fonts:
+        - asset: assets/fonts/Phosphor-Regular.ttf
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/Phosphor-Fill.ttf
     - family: Sora
       fonts:
         - asset: assets/fonts/Sora-600.ttf

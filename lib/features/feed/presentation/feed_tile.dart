@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/labels.dart';
 import '../../../core/widgets/avatar.dart';
@@ -63,7 +64,7 @@ class _FeedTileState extends State<FeedTile> with SingleTickerProviderStateMixin
     final likes = widget.item.likes;
     if (likes == null || !likes.enabled) return;
     HapticFeedback.mediumImpact();
-    _burst.forward(from: 0);
+    if (!context.reduceMotion) _burst.forward(from: 0);
     if (!likes.liked) widget.onLike();
   }
 
@@ -78,75 +79,120 @@ class _FeedTileState extends State<FeedTile> with SingleTickerProviderStateMixin
         final player = widget.pool.player(item.key);
         final ready = player != null && player.value.isInitialized;
 
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        return Semantics(
+          label: 'Prestation de ${item.stageName}, ${item.contextLabel}, ${item.competitionName}',
+          hint: item.likes?.enabled == true ? 'Toucher pour mettre en pause, deux fois pour liker' : 'Toucher pour mettre en pause',
           onTap: () => _togglePause(player),
-          onDoubleTap: _doubleTapLike,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const ColoredBox(color: Colors.black),
-              // Poster: instant, from the disk once seen.
-              if (item.media.posterUrl != null)
-                CachedImage(cacheKey: '${item.key}-poster', url: item.media.posterUrl, fit: item.media.isPortrait ? BoxFit.cover : BoxFit.contain),
-              // The video layer appears with its first frame (the poster stays until then: no black flash).
-              if (ready)
-                ValueListenableBuilder<VideoPlayerValue>(
-                  valueListenable: player,
-                  builder: (context, value, child) => AnimatedOpacity(
-                    opacity: value.isPlaying || value.position > Duration.zero ? 1 : 0,
-                    duration: Motion.fast,
-                    child: child,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _togglePause(player),
+            onDoubleTap: _doubleTapLike,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const ColoredBox(color: Colors.black),
+                // Poster: instant, from the disk once seen.
+                if (item.media.posterUrl != null)
+                  CachedImage(cacheKey: '${item.key}-poster', url: item.media.posterUrl, fit: item.media.isPortrait ? BoxFit.cover : BoxFit.contain),
+                // The video layer appears with its first frame (the poster stays until then: no black flash).
+                if (ready)
+                  ValueListenableBuilder<VideoPlayerValue>(
+                    valueListenable: player,
+                    builder: (context, value, child) =>
+                        AnimatedOpacity(opacity: value.isPlaying || value.position > Duration.zero ? 1 : 0, duration: Motion.fast, child: child),
+                    child: RepaintBoundary(
+                      child: FittedBox(
+                        fit: item.media.isPortrait ? BoxFit.cover : BoxFit.contain,
+                        clipBehavior: Clip.hardEdge,
+                        child: SizedBox(width: player.value.size.width, height: player.value.size.height, child: VideoPlayer(player)),
+                      ),
+                    ),
                   ),
-                  child: RepaintBoundary(
-                    child: FittedBox(
-                      fit: item.media.isPortrait ? BoxFit.cover : BoxFit.contain,
-                      clipBehavior: Clip.hardEdge,
-                      child: SizedBox(width: player.value.size.width, height: player.value.size.height, child: VideoPlayer(player)),
+                if (!ready && widget.active)
+                  const Center(
+                    child: SizedBox.square(dimension: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white70)),
+                  ),
+                if (_pausedByUser) Center(child: Icon(AppIcons.play, size: 84, color: Colors.white.withValues(alpha: 0.85))),
+                // Double-tap heart.
+                Center(
+                  child: AnimatedBuilder(
+                    animation: _burst,
+                    builder: (context, _) {
+                      final t = Curves.easeOutBack.transform((_burst.value * 1.6).clamp(0, 1));
+                      final fade = _burst.value < 0.6 ? 1.0 : 1 - (_burst.value - 0.6) / 0.4;
+                      return _burst.isAnimating
+                          ? Opacity(
+                              opacity: fade,
+                              child: Transform.scale(
+                                scale: 0.6 + t * 0.6,
+                                child: Icon(AppIcons.liked, size: 120, color: c.like),
+                              ),
+                            )
+                          : const SizedBox.shrink();
+                    },
+                  ),
+                ),
+                // Where this performance stands in its competition.
+                Positioned(
+                  top: MediaQuery.paddingOf(context).top + 56,
+                  left: Space.lg,
+                  right: Space.lg,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ExcludeSemantics(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: 5),
+                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(Radii.pill)),
+                        child: Text(
+                          [
+                            item.contextLabel,
+                            if (item.vote?.open == true && item.vote?.closesAt != null) 'vote ferme ${Labels.remaining(item.vote!.closesAt!)}',
+                            if (item.likes?.open == true) 'likes ouverts',
+                          ].where((s) => s.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              if (!ready && widget.active)
-                const Center(child: SizedBox.square(dimension: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white70))),
-              if (_pausedByUser)
-                Center(child: Icon(Icons.play_arrow_rounded, size: 84, color: Colors.white.withValues(alpha: 0.85))),
-              // Double-tap heart.
-              Center(
-                child: AnimatedBuilder(
-                  animation: _burst,
-                  builder: (context, _) {
-                    final t = Curves.easeOutBack.transform((_burst.value * 1.6).clamp(0, 1));
-                    final fade = _burst.value < 0.6 ? 1.0 : 1 - (_burst.value - 0.6) / 0.4;
-                    return _burst.isAnimating
-                        ? Opacity(opacity: fade, child: Transform.scale(scale: 0.6 + t * 0.6, child: Icon(Icons.favorite_rounded, size: 120, color: c.like)))
-                        : const SizedBox.shrink();
-                  },
-                ),
-              ),
-              // Bottom veil for the credits (solid, no gradient).
-              Positioned(left: 0, right: 0, bottom: 0, height: 170, child: ColoredBox(color: Colors.black.withValues(alpha: 0.28))),
-              Positioned(
-                left: Space.lg,
-                right: 88,
-                bottom: Space.lg,
-                child: _Credits(item: item, onCompetition: widget.onCompetition),
-              ),
-              Positioned(
-                right: Space.sm,
-                bottom: Space.lg,
-                child: _Actions(item: item, onLike: widget.onLike, onShare: widget.onShare, onVote: widget.onVote, onCompetition: widget.onCompetition),
-              ),
-              if (ready)
+                // Bottom veil for the credits (solid, no gradient).
+                Positioned(left: 0, right: 0, bottom: 0, height: 170, child: ColoredBox(color: Colors.black.withValues(alpha: 0.28))),
                 Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: SizedBox(
-                    height: 2,
-                    child: VideoProgressIndicator(player, allowScrubbing: false, padding: EdgeInsets.zero, colors: VideoProgressColors(playedColor: c.primary, backgroundColor: Colors.white24, bufferedColor: Colors.white38)),
+                  left: Space.lg,
+                  right: 88,
+                  bottom: Space.lg,
+                  child: _Credits(item: item, onCompetition: widget.onCompetition),
+                ),
+                Positioned(
+                  right: Space.sm,
+                  bottom: Space.lg,
+                  child: _Actions(
+                    item: item,
+                    onLike: widget.onLike,
+                    onShare: widget.onShare,
+                    onVote: widget.onVote,
+                    onCompetition: widget.onCompetition,
                   ),
                 ),
-            ],
+                if (ready)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: SizedBox(
+                      height: 2,
+                      child: VideoProgressIndicator(
+                        player,
+                        allowScrubbing: false,
+                        padding: EdgeInsets.zero,
+                        colors: VideoProgressColors(playedColor: c.primary, backgroundColor: Colors.white24, bufferedColor: Colors.white38),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -169,7 +215,10 @@ class _Credits extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('@${item.stageName}', style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700, shadows: _shadow)),
+        Text(
+          '@${item.stageName}',
+          style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700, shadows: _shadow),
+        ),
         const SizedBox(height: Space.xs),
         Text(
           [item.contextLabel, if (item.discipline != null) Labels.discipline(item.discipline)].where((s) => s.isNotEmpty).join(' · '),
@@ -189,7 +238,14 @@ class _Credits extends StatelessWidget {
                 children: [
                   const Icon(AppIcons.trophy, size: 16, color: Colors.white),
                   const SizedBox(width: 6),
-                  Flexible(child: Text(item.competitionName, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelMedium?.copyWith(color: Colors.white))),
+                  Flexible(
+                    child: Text(
+                      item.competitionName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.labelMedium?.copyWith(color: Colors.white),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -225,14 +281,14 @@ class _Actions extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-              child: Avatar(name: item.stageName, url: item.avatarUrl, size: 46),
+              child: Avatar(name: item.stageName, url: item.avatarUrl, size: 40),
             ),
           ),
         ),
         const SizedBox(height: Space.xl),
         if (likes != null && likes.enabled)
           _ActionButton(
-            icon: likes.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            icon: likes.liked ? AppIcons.liked : AppIcons.like,
             color: likes.liked ? c.like : Colors.white,
             label: likes.count != null ? Labels.count(likes.count!) : 'J\'aime',
             semantics: likes.liked ? 'Retirer mon like' : 'Liker cette prestation',
@@ -240,13 +296,13 @@ class _Actions extends StatelessWidget {
           ),
         if (vote != null)
           _ActionButton(
-            icon: Icons.how_to_vote_rounded,
+            icon: AppIcons.vote,
             color: vote.open ? c.accent : Colors.white,
             label: vote.open ? 'Voter' : 'Match',
             semantics: vote.open ? 'Voter pour ce match' : 'Voir le match',
             onTap: onVote,
           ),
-        _ActionButton(icon: Icons.ios_share_rounded, color: Colors.white, label: 'Partager', semantics: 'Partager la prestation', onTap: onShare),
+        _ActionButton(icon: AppIcons.share, color: Colors.white, label: 'Partager', semantics: 'Partager la prestation', onTap: onShare),
       ],
     );
   }
@@ -263,31 +319,34 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: semantics,
-        excludeSemantics: true,
-        child: InkResponse(
-          onTap: onTap == null
-              ? null
-              : () {
-                  HapticFeedback.selectionClick();
-                  onTap!();
-                },
-          radius: 36,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: Space.sm, horizontal: Space.xs),
-            child: Column(
-              children: [
-                AnimatedSwitcher(
-                  duration: Motion.fast,
-                  transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                  child: Icon(icon, key: ValueKey(icon), size: 36, color: onTap == null ? color.withValues(alpha: 0.5) : color, shadows: _shadow),
-                ),
-                const SizedBox(height: 2),
-                Text(label, style: context.text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600, shadows: _shadow)),
-              ],
+    button: true,
+    label: semantics,
+    excludeSemantics: true,
+    child: InkResponse(
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onTap!();
+            },
+      radius: 36,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.sm, horizontal: Space.xs),
+        child: Column(
+          children: [
+            AnimatedSwitcher(
+              duration: context.motion(Motion.fast),
+              transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+              child: Icon(icon, key: ValueKey(icon), size: 30, color: onTap == null ? color.withValues(alpha: 0.5) : color, shadows: _shadow),
             ),
-          ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: context.text.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600, shadows: _shadow),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

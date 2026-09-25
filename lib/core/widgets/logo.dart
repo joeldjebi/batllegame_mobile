@@ -1,35 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/tokens.dart';
+import '../theme/brand.dart';
 
-/// Wordmark: a solid violet mark + « Battle Game » in Sora.
+/// Typographic wordmark: « Battle » bold, « Game » light, the brand dot.
 class Logo extends StatelessWidget {
-  const Logo({super.key, this.size = 28});
+  const Logo({super.key, this.size = 22});
 
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final base = TextStyle(fontFamily: Brand.displayFont, fontSize: size, height: 1, letterSpacing: -0.4, color: c.text);
     return Semantics(
       label: 'Battle Game',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(size * 0.3)),
-            alignment: Alignment.center,
-            child: Text(
-              'B',
-              style: context.text.titleLarge?.copyWith(color: c.onPrimary, fontSize: size * 0.6, height: 1),
-            ),
-          ),
-          const SizedBox(width: Space.sm),
-          Text('Battle Game', style: context.text.titleLarge?.copyWith(fontSize: size * 0.72)),
-        ],
+      excludeSemantics: true,
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(text: 'Battle', style: base.copyWith(fontWeight: FontWeight.w800)),
+          TextSpan(text: 'Game', style: base.copyWith(fontWeight: FontWeight.w600, color: c.textMuted)),
+          TextSpan(text: '.', style: base.copyWith(fontWeight: FontWeight.w800, color: c.primary)),
+        ]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

@@ -150,7 +150,7 @@ class CompetitionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: c.textMuted),
+              Icon(AppIcons.forward, color: c.textMuted),
             ],
           ),
         ),

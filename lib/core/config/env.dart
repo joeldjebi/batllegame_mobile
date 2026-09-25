@@ -7,6 +7,9 @@ abstract final class Env {
 
   static const String appName = 'Battle Game';
 
+  /// Shown in Réglages (`--dart-define=APP_VERSION=…` at release time).
+  static const String version = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
+
   /// Development only: open the app on a given screen (`--dart-define=START=/auth/connexion`).
   static const String startRoute = String.fromEnvironment('START', defaultValue: '/');
 }

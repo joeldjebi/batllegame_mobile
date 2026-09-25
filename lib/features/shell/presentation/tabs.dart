@@ -10,85 +10,6 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 
-/// Publier: send a performance (phase 3). Needs an account.
-class CreateTab extends ConsumerWidget {
-  const CreateTab({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => SafeArea(
-    child: ref.watch(currentUserProvider) == null
-        ? const SignInPrompt(
-            icon: AppIcons.video,
-            title: 'Publie ta prestation',
-            message: 'Connecte-toi pour participer aux compétitions.',
-          )
-        : const EmptyState(icon: AppIcons.video, title: 'Publier une prestation', message: 'L\'envoi de vidéo arrive bientôt.'),
-  );
-}
-
-/// Activité: notifications (phase 5) and the actions waiting for the network.
-class ActivityTab extends ConsumerWidget {
-  const ActivityTab({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(currentUserProvider) == null) {
-      return const SafeArea(
-        child: SignInPrompt(
-          icon: AppIcons.activity,
-          title: 'Ton activité',
-          message: 'Connecte-toi pour suivre tes votes et tes compétitions.',
-        ),
-      );
-    }
-    final actions = ref.watch(outboxProvider).watch();
-    final c = context.colors;
-
-    return SafeArea(
-      child: StreamBuilder(
-        stream: actions,
-        builder: (context, snapshot) {
-          final items = snapshot.data ?? const [];
-          if (items.isEmpty) {
-            return const EmptyState(
-              icon: AppIcons.activity,
-              title: 'Rien pour le moment',
-              message: 'Tes notifications apparaîtront ici.',
-            );
-          }
-          return ListView(
-            padding: const EdgeInsets.all(Space.gutter),
-            children: [
-              Text('En attente d\'envoi', style: context.text.titleLarge),
-              const SizedBox(height: Space.md),
-              for (final action in items)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    action.state == 'failed' ? AppIcons.error : AppIcons.pending,
-                    color: action.state == 'failed' ? c.danger : c.warning,
-                  ),
-                  title: Text(action.label),
-                  subtitle: Text(
-                    action.state == 'failed' ? (action.lastError ?? 'Refusé') : 'Sera envoyé au retour du réseau',
-                    style: context.text.bodySmall,
-                  ),
-                  trailing: action.state == 'failed'
-                      ? IconButton(
-                          tooltip: 'Retirer',
-                          icon: const Icon(AppIcons.close),
-                          onPressed: () => ref.read(outboxProvider).discard(action.id),
-                        )
-                      : null,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
 /// Profil: account, phone verification, jury space, sign-out.
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({super.key});
@@ -153,6 +74,27 @@ class ProfileTab extends ConsumerWidget {
               const SizedBox(height: Space.md),
             ],
             const SizedBox(height: Space.lg),
+            AppButton(
+              label: 'Modifier mon profil',
+              variant: AppButtonVariant.secondary,
+              icon: AppIcons.edit,
+              onPressed: () => context.push('/profil/modifier'),
+            ),
+            const SizedBox(height: Space.md),
+            AppButton(
+              label: 'Mes compétitions',
+              variant: AppButtonVariant.secondary,
+              icon: AppIcons.trophy,
+              onPressed: () => context.go('/publier'),
+            ),
+            const SizedBox(height: Space.md),
+            AppButton(
+              label: 'Réglages',
+              variant: AppButtonVariant.secondary,
+              icon: AppIcons.settings,
+              onPressed: () => context.push('/reglages'),
+            ),
+            const SizedBox(height: Space.md),
             AppButton(
               label: 'Changer de mot de passe',
               variant: AppButtonVariant.secondary,

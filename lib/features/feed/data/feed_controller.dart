@@ -22,22 +22,33 @@ class FeedState {
 
   bool get hasMore => nextCursor != null;
 
-  FeedState copyWith({List<FeedItem>? items, String? nextCursor, bool clearCursor = false, bool? loading, bool? loadingMore, ApiException? error, bool clearError = false, bool? fromCache}) =>
-      FeedState(
-        items: items ?? this.items,
-        nextCursor: clearCursor ? null : (nextCursor ?? this.nextCursor),
-        loading: loading ?? this.loading,
-        loadingMore: loadingMore ?? this.loadingMore,
-        error: clearError ? null : (error ?? this.error),
-        fromCache: fromCache ?? this.fromCache,
-      );
+  FeedState copyWith({
+    List<FeedItem>? items,
+    String? nextCursor,
+    bool clearCursor = false,
+    bool? loading,
+    bool? loadingMore,
+    ApiException? error,
+    bool clearError = false,
+    bool? fromCache,
+  }) => FeedState(
+    items: items ?? this.items,
+    nextCursor: clearCursor ? null : (nextCursor ?? this.nextCursor),
+    loading: loading ?? this.loading,
+    loadingMore: loadingMore ?? this.loadingMore,
+    error: clearError ? null : (error ?? this.error),
+    fromCache: fromCache ?? this.fromCache,
+  );
 }
 
 /// The feed (all competitions, or one with [competition]): first page from the local
 /// copy at once, then the server; more pages as the viewer scrolls. Likes are applied
 /// on screen at once and sent through the offline queue (reverted if refused).
 class FeedController extends StateNotifier<FeedState> {
-  FeedController({required ApiClient api, required Outbox outbox, this.competition}) : _api = api, _outbox = outbox, super(const FeedState(loading: true)) {
+  FeedController({required ApiClient api, required Outbox outbox, this.competition})
+    : _api = api,
+      _outbox = outbox,
+      super(const FeedState(loading: true)) {
     _results = _outbox.results.listen(_onResult);
     unawaited(refresh());
   }
@@ -52,11 +63,7 @@ class FeedController extends StateNotifier<FeedState> {
 
   static const int _pageSize = 8;
 
-  Map<String, dynamic> _query([String? cursor]) => {
-        'limit': _pageSize,
-        'competition': ?competition,
-        'cursor': ?cursor,
-      };
+  Map<String, dynamic> _query([String? cursor]) => {'limit': _pageSize, 'competition': ?competition, 'cursor': ?cursor};
 
   Future<void> refresh() async {
     if (state.items.isEmpty) {
@@ -103,19 +110,29 @@ class FeedController extends StateNotifier<FeedState> {
     final before = state.items;
     final liking = !likes.liked;
 
-    state = state.copyWith(items: [
-      for (final other in state.items)
-        if (other.key == item.key)
-          other.withLikes(likes.copyWith(liked: liking, count: likes.count == null ? null : likes.count! + (liking ? 1 : -1)))
-        else if (liking && other.competitionSlug == item.competitionSlug && other.likes?.liked == true)
-          other.withLikes(other.likes!.copyWith(liked: false, count: other.likes!.count == null ? null : other.likes!.count! - 1))
-        else
-          other,
-    ]);
+    state = state.copyWith(
+      items: [
+        for (final other in state.items)
+          if (other.key == item.key)
+            other.withLikes(likes.copyWith(liked: liking, count: likes.count == null ? null : likes.count! + (liking ? 1 : -1)))
+          else if (liking && other.competitionSlug == item.competitionSlug && other.likes?.liked == true)
+            other.withLikes(other.likes!.copyWith(liked: false, count: other.likes!.count == null ? null : other.likes!.count! - 1))
+          else
+            other,
+      ],
+    );
 
     final id = liking
-        ? await _outbox.enqueue(method: 'POST', path: '/competitions/${item.competitionSlug}/preselection/entries/${item.id}/like', label: 'Like · ${item.stageName}')
-        : await _outbox.enqueue(method: 'DELETE', path: '/competitions/${item.competitionSlug}/preselection/like', label: 'Like retiré · ${item.stageName}');
+        ? await _outbox.enqueue(
+            method: 'POST',
+            path: '/competitions/${item.competitionSlug}/preselection/entries/${item.id}/like',
+            label: 'Like · ${item.stageName}',
+          )
+        : await _outbox.enqueue(
+            method: 'DELETE',
+            path: '/competitions/${item.competitionSlug}/preselection/like',
+            label: 'Like retiré · ${item.stageName}',
+          );
     _pendingLikes[id] = before;
   }
 
@@ -129,13 +146,15 @@ class FeedController extends StateNotifier<FeedState> {
     // The server tells the real counts once the viewer has liked.
     final counts = result.response?.json['counts'];
     if (counts is Map) {
-      state = state.copyWith(items: [
-        for (final item in state.items)
-          if (item.isEntry && item.likes != null && counts.containsKey('${item.id}'))
-            item.withLikes(item.likes!.copyWith(count: counts['${item.id}'] as int?))
-          else
-            item,
-      ]);
+      state = state.copyWith(
+        items: [
+          for (final item in state.items)
+            if (item.isEntry && item.likes != null && counts.containsKey('${item.id}'))
+              item.withLikes(item.likes!.copyWith(count: counts['${item.id}'] as int?))
+            else
+              item,
+        ],
+      );
     }
   }
 

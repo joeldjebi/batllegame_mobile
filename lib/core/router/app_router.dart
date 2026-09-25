@@ -2,6 +2,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/activity/presentation/activity_screen.dart';
+import '../../features/artist/presentation/edit_profile_screen.dart';
+import '../../features/artist/presentation/journey_screen.dart';
+import '../../features/artist/presentation/my_competitions_screen.dart';
+import '../../features/artist/presentation/registration.dart';
 import '../../features/auth/data/session.dart';
 import '../../features/auth/presentation/change_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -12,7 +17,11 @@ import '../../features/competitions/presentation/discover_screen.dart';
 import '../../features/competitions/presentation/match_screen.dart';
 import '../../features/feed/data/feed_item.dart';
 import '../../features/feed/presentation/home_feed_screen.dart';
+import '../../features/jury/presentation/jury_entry_screen.dart';
 import '../../features/jury/presentation/jury_home_screen.dart';
+import '../../features/jury/presentation/jury_matches_screen.dart';
+import '../../features/jury/presentation/jury_preselection_screen.dart';
+import '../../features/settings/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 import '../../features/shell/presentation/tabs.dart';
 import '../config/env.dart';
@@ -36,7 +45,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onAuth = path.startsWith('/auth');
 
       if (user == null) {
-        const private = ['/auth/verification', '/auth/mot-de-passe', '/jury'];
+        const private = ['/auth/verification', '/auth/mot-de-passe', '/jury', '/profil/modifier'];
+        if (path.endsWith('/parcours') || path.endsWith('/paiement')) return '/auth/connexion';
         return private.any(path.startsWith) ? '/auth/connexion' : null;
       }
       if (user.mustChangePassword) return path == '/auth/mot-de-passe' ? null : '/auth/mot-de-passe';
@@ -56,10 +66,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [GoRoute(path: '/decouvrir', builder: (_, _) => const DiscoverScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/publier', builder: (_, _) => const CreateTab())],
+            routes: [GoRoute(path: '/publier', builder: (_, _) => const MyCompetitionsScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/activite', builder: (_, _) => const ActivityTab())],
+            routes: [GoRoute(path: '/activite', builder: (_, _) => const ActivityScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/profil', builder: (_, _) => const ProfileTab())],
@@ -71,6 +81,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth/verification', builder: (_, _) => const VerifyPhoneScreen()),
       GoRoute(path: '/auth/mot-de-passe', builder: (_, _) => const ChangePasswordScreen()),
       GoRoute(path: '/jury', builder: (_, _) => const JuryHomeScreen()),
+      GoRoute(path: '/jury/:slug/preselection', builder: (_, state) => JuryPreselectionScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(
+        path: '/jury/:slug/preselection/:entry',
+        builder: (_, state) => JuryEntryScreen(slug: state.pathParameters['slug']!, entryId: int.parse(state.pathParameters['entry']!)),
+      ),
+      GoRoute(path: '/jury/:slug/matchs', builder: (_, state) => JuryMatchesScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(
+        path: '/jury/:slug/matchs/:id',
+        builder: (_, state) => JuryMatchScreen(slug: state.pathParameters['slug']!, id: int.parse(state.pathParameters['id']!)),
+      ),
       GoRoute(path: '/competitions/:slug', builder: (_, state) => CompetitionScreen(slug: state.pathParameters['slug']!)),
       GoRoute(
         path: '/competitions/:slug/prestations',
@@ -80,6 +100,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/competitions/:slug/matchs/:id',
         builder: (_, state) => MatchScreen(slug: state.pathParameters['slug']!, id: int.parse(state.pathParameters['id']!)),
       ),
+      GoRoute(path: '/competitions/:slug/parcours', builder: (_, state) => JourneyScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(path: '/competitions/:slug/paiement', builder: (_, state) => PaymentScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(path: '/profil/modifier', builder: (_, _) => const EditProfileScreen()),
+      GoRoute(path: '/reglages', builder: (_, _) => const SettingsScreen()),
       GoRoute(
         path: '/lecture',
         builder: (_, state) {

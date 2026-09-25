@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 
 /// Discreet strip under the status bar while the server is unreachable: the app keeps
@@ -18,7 +19,7 @@ class OfflineBanner extends ConsumerWidget {
     final c = context.colors;
 
     return AnimatedSize(
-      duration: Motion.base,
+      duration: context.motion(Motion.base),
       curve: Motion.enter,
       child: online
           ? const SizedBox(width: double.infinity)

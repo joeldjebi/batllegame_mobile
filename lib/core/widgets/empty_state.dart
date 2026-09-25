@@ -20,11 +20,13 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(color: c.surfaceRaised, borderRadius: BorderRadius.circular(Radii.lg)),
-              child: Icon(icon, size: 28, color: c.accent),
+            ExcludeSemantics(
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(color: c.surfaceRaised, borderRadius: BorderRadius.circular(Radii.lg)),
+                child: Icon(icon, size: 24, color: c.accent),
+              ),
             ),
             const SizedBox(height: Space.lg),
             Text(title, textAlign: TextAlign.center, style: context.text.titleLarge),

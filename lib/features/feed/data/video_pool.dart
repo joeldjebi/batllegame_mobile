@@ -11,7 +11,12 @@ import 'feed_item.dart';
 /// created from the disk copy when there is one, else streamed. Next videos are
 /// saved to disk on Wi-Fi so they start instantly and play offline later.
 class VideoPool extends ChangeNotifier {
-  VideoPool(this._cache, {Connectivity? connectivity}) : _connectivity = connectivity ?? Connectivity();
+  VideoPool(this._cache, {Connectivity? connectivity, this.prefetch = _wifi}) : _connectivity = connectivity ?? Connectivity();
+
+  static String _wifi() => 'wifi';
+
+  /// Data saver setting: `wifi` (default), `always`, `never`.
+  final String Function() prefetch;
 
   final MediaCache _cache;
   final Connectivity _connectivity;
@@ -68,7 +73,8 @@ class VideoPool extends ChangeNotifier {
     if (item.key == _current) unawaited(player.play());
     notifyListeners();
 
-    if (file == null && await _onWifi()) _cache.prefetch(key, url);
+    final mode = prefetch();
+    if (file == null && mode != 'never' && (mode == 'always' || await _onWifi())) _cache.prefetch(key, url);
     return player;
   }
 

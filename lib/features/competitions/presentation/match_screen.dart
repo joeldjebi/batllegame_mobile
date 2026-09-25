@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/offline/outbox.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/labels.dart';
 import '../../../core/widgets/app_button.dart';
@@ -16,6 +17,7 @@ import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/auth_gate.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/cached_image.dart';
+import '../../../core/widgets/live_channel.dart';
 import '../../../core/widgets/resource_view.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/toast.dart';
@@ -53,7 +55,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       if (result.id != _pendingId || !mounted) return;
       setState(() => _pendingId = null);
       if (result.succeeded) {
-        showToast(context, 'Vote enregistré, merci !');
+        showToast(context, 'Vote enregistré.');
       } else {
         setState(() => _votedFor = null);
         ref.read(databaseProvider).deleteValue(_voteKey);
@@ -97,7 +99,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     final key = (slug: widget.slug, id: widget.id);
     final c = context.colors;
 
-    return Scaffold(
+    final competitionId = ref.watch(competitionProvider(widget.slug)).valueOrNull?.data?.id;
+    final page = Scaffold(
       body: ResourceView(
         value: ref.watch(matchProvider(key)),
         onRetry: () => ref.invalidate(matchProvider(key)),
@@ -113,8 +116,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                   if (match.shareUrl.isNotEmpty)
                     IconButton(
                       tooltip: 'Partager',
-                      icon: const Icon(Icons.ios_share_rounded),
-                      onPressed: () => SharePlus.instance.share(ShareParams(text: 'Vote sur Battle Game 🔥 ${match.shareUrl}')),
+                      icon: const Icon(AppIcons.share),
+                      onPressed: () => SharePlus.instance.share(ShareParams(text: 'Vote sur Battle Game : ${match.shareUrl}')),
                     ),
                 ],
               ),
@@ -145,6 +148,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         ),
       ),
     );
+    // Votes and statuses of this competition, live.
+    return competitionId == null ? page : LiveChannel(channel: 'competition.$competitionId', child: page);
   }
 }
 
@@ -228,7 +233,7 @@ class _SlotCard extends StatelessWidget {
                           width: 56,
                           height: 56,
                           decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                          child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
+                          child: const Icon(AppIcons.play, color: Colors.white, size: 36),
                         ),
                       ),
                     ],
@@ -255,14 +260,14 @@ class _SlotCard extends StatelessWidget {
                 ),
                 if (slot.finalScore != null)
                   Text('${slot.finalScore!.toStringAsFixed(1).replaceAll('.', ',')} / 100', style: context.text.titleSmall),
-                if (voted) Icon(Icons.check_circle_rounded, color: c.primary),
+                if (voted) Icon(AppIcons.done, color: c.primary),
               ],
             ),
           ),
           if (canVote)
             Padding(
               padding: const EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.lg),
-              child: AppButton(label: 'Voter pour ${slot.stageName}', icon: Icons.how_to_vote_rounded, onPressed: onVote),
+              child: AppButton(label: 'Voter pour ${slot.stageName}', icon: AppIcons.vote, onPressed: onVote),
             ),
         ],
       ),

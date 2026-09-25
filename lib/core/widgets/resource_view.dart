@@ -5,6 +5,7 @@ import '../network/resource.dart';
 import '../theme/app_icons.dart';
 import 'app_button.dart';
 import 'empty_state.dart';
+import 'skeleton.dart';
 
 /// Loading → data (possibly the local copy) → error only when nothing is known.
 class ResourceView<T> extends StatelessWidget {
@@ -28,6 +29,6 @@ class ResourceView<T> extends StatelessWidget {
         action: AppButton(label: 'Réessayer', expand: false, onPressed: onRetry),
       );
     }
-    return loading ?? const Center(child: CircularProgressIndicator());
+    return loading ?? const SkeletonList();
   }
 }

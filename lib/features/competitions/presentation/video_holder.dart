@@ -3,6 +3,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/media/media_cache.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../feed/data/feed_item.dart';
 
 /// One player for the match / full-screen views: disk copy first, else streamed
@@ -36,7 +37,7 @@ class VideoPlayerControllerHolder {
             alignment: Alignment.bottomCenter,
             children: [
               AspectRatio(aspectRatio: value.aspectRatio, child: VideoPlayer(controller)),
-              if (!value.isPlaying) const Positioned.fill(child: Center(child: Icon(Icons.play_arrow_rounded, size: 72, color: Colors.white))),
+              if (!value.isPlaying) const Positioned.fill(child: Center(child: Icon(AppIcons.play, size: 72, color: Colors.white))),
               VideoProgressIndicator(
                 controller,
                 allowScrubbing: true,

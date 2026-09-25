@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/offline_banner.dart';
+import '../../activity/data/providers.dart';
 
 /// Five tabs, the TikTok way: Accueil · Découvrir · + · Activité · Profil.
 class AppShell extends ConsumerWidget {
@@ -26,7 +28,6 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.colors;
     // The feed plays only while its tab is shown.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.read(currentTabProvider) != shell.currentIndex) ref.read(currentTabProvider.notifier).state = shell.currentIndex;
@@ -38,31 +39,41 @@ class AppShell extends ConsumerWidget {
           Expanded(child: shell),
         ],
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: c.background,
-          border: Border(top: BorderSide(color: c.border)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              children: [
-                for (final (index, tab) in _tabs.indexed)
-                  Expanded(
-                    child: index == 2
-                        ? _CreateButton(onTap: () => _go(index))
-                        : _TabItem(
-                            icon: shell.currentIndex == index ? tab.active : tab.icon,
-                            label: tab.label,
-                            selected: shell.currentIndex == index,
-                            onTap: () => _go(index),
-                          ),
+      // Over the video feed the bar is dark, like the feed itself.
+      bottomNavigationBar: Theme(
+        data: shell.currentIndex == 0 ? AppTheme.dark() : Theme.of(context),
+        child: Builder(
+          builder: (context) {
+            final c = context.colors;
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.background,
+                border: Border(top: BorderSide(color: c.border)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      for (final (index, tab) in _tabs.indexed)
+                        Expanded(
+                          child: index == 2
+                              ? _CreateButton(onTap: () => _go(index))
+                              : _TabItem(
+                                  icon: shell.currentIndex == index ? tab.active : tab.icon,
+                                  label: tab.label,
+                                  selected: shell.currentIndex == index,
+                                  badge: index == 3 ? ref.watch(unreadActivityProvider) : 0,
+                                  onTap: () => _go(index),
+                                ),
+                        ),
+                    ],
                   ),
-              ],
-            ),
-          ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -76,11 +87,12 @@ class AppShell extends ConsumerWidget {
 }
 
 class _TabItem extends StatelessWidget {
-  const _TabItem({required this.icon, required this.label, required this.selected, required this.onTap});
+  const _TabItem({required this.icon, required this.label, required this.selected, required this.onTap, this.badge = 0});
 
   final IconData icon;
   final String label;
   final bool selected;
+  final int badge;
   final VoidCallback onTap;
 
   @override
@@ -90,7 +102,7 @@ class _TabItem extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
+      label: badge > 0 ? '$label, $badge nouveau(x)' : label,
       excludeSemantics: true,
       child: InkResponse(
         onTap: onTap,
@@ -98,13 +110,18 @@ class _TabItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedScale(
-              scale: selected ? 1.08 : 1,
-              duration: Motion.fast,
-              child: Icon(icon, size: 24, color: color),
+            Badge(
+              isLabelVisible: badge > 0,
+              label: Text(badge > 9 ? '9+' : '$badge'),
+              backgroundColor: c.like,
+              child: AnimatedScale(
+                scale: selected ? 1.06 : 1,
+                duration: context.motion(Motion.fast),
+                child: Icon(icon, size: 22, color: color),
+              ),
             ),
             const SizedBox(height: 3),
-            Text(label, style: context.text.labelSmall?.copyWith(color: color, fontSize: 11)),
+            Text(label, style: context.text.labelSmall?.copyWith(color: color, fontSize: 10)),
           ],
         ),
       ),
@@ -128,10 +145,10 @@ class _CreateButton extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: Container(
-            width: 52,
-            height: 36,
+            width: 46,
+            height: 32,
             decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(Radii.md)),
-            child: Icon(AppIcons.create, color: c.onPrimary, size: 24),
+            child: Icon(AppIcons.create, color: c.onPrimary, size: 20),
           ),
         ),
       ),

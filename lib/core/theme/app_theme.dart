@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_colors.dart';
+import 'app_icons.dart';
 import 'brand.dart';
 import 'tokens.dart';
 
 /// Material themes of the two experiences, built from [AppColors] and [Brand].
 abstract final class AppTheme {
-  static ThemeData fan() => _build(AppColors.fan, Brightness.dark);
+  static final ThemeData _light = _build(AppColors.light, Brightness.light);
+  static final ThemeData _dark = _build(AppColors.dark, Brightness.dark);
 
-  static ThemeData jury() => _build(AppColors.jury, Brightness.light);
+  /// Default theme.
+  static ThemeData light() => _light;
+
+  /// Chosen in Réglages, and always for the video feed.
+  static ThemeData dark() => _dark;
 
   static ThemeData _build(AppColors c, Brightness brightness) {
     final text = _textTheme(c);
@@ -36,6 +42,11 @@ abstract final class AppTheme {
       textTheme: text,
       extensions: [c],
       splashFactory: InkSparkle.splashFactory,
+      // Back / close buttons of the app bars in the same icon family.
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) => const Icon(AppIcons.back, size: 22),
+        closeButtonIconBuilder: (_) => const Icon(AppIcons.close, size: 22),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: c.background,
         foregroundColor: c.text,
@@ -48,7 +59,7 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: c.surfaceRaised,
-        contentPadding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: Space.md + 2, vertical: 12),
         hintStyle: text.bodyLarge?.copyWith(color: c.textMuted),
         border: border(c.border),
         enabledBorder: border(c.border),
@@ -72,7 +83,7 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: c.background,
         indicatorColor: Colors.transparent,
-        height: 64,
+        height: 60,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => text.labelSmall?.copyWith(color: states.contains(WidgetState.selected) ? c.text : c.textMuted),
         ),
@@ -97,18 +108,18 @@ abstract final class AppTheme {
         TextStyle(fontFamily: Brand.bodyFont, fontSize: size, fontWeight: weight, height: height, color: color ?? c.text);
 
     return TextTheme(
-      displaySmall: display(34, FontWeight.w800),
-      headlineMedium: display(28, FontWeight.w800),
-      headlineSmall: display(24, FontWeight.w700),
-      titleLarge: display(20, FontWeight.w700, height: 1.25),
-      titleMedium: body(16, FontWeight.w600),
+      displaySmall: display(28, FontWeight.w700),
+      headlineMedium: display(24, FontWeight.w700),
+      headlineSmall: display(20, FontWeight.w700, height: 1.2),
+      titleLarge: display(17, FontWeight.w600, height: 1.25),
+      titleMedium: body(15, FontWeight.w600),
       titleSmall: body(14, FontWeight.w600),
-      bodyLarge: body(16, FontWeight.w400),
+      bodyLarge: body(15, FontWeight.w400),
       bodyMedium: body(14, FontWeight.w400),
-      bodySmall: body(13, FontWeight.w400, color: c.textMuted),
-      labelLarge: body(16, FontWeight.w600, height: 1.2),
-      labelMedium: body(13, FontWeight.w600, height: 1.2),
-      labelSmall: body(12, FontWeight.w500, height: 1.2),
+      bodySmall: body(12.5, FontWeight.w400, color: c.textMuted),
+      labelLarge: body(15, FontWeight.w600, height: 1.2),
+      labelMedium: body(12.5, FontWeight.w600, height: 1.2),
+      labelSmall: body(11, FontWeight.w500, height: 1.2),
     );
   }
 }
