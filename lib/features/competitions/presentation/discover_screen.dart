@@ -44,9 +44,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: Space.gutter),
-              child: LargeTitle('Découvrir'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
+              child: LargeTitle(
+                'Découvrir',
+                trailing: IconButton(
+                  tooltip: 'Rechercher',
+                  onPressed: () => context.push('/recherche'),
+                  icon: Icon(AppIcons.search, color: c.text),
+                ),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.lg),

@@ -185,6 +185,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
                     onPressed: widget.onBack,
                     icon: const Icon(AppIcons.back, color: Colors.white),
                   )
+                // Home: the sound on the left, search takes the right (as on TikTok).
+                else if (!widget.showTitle)
+                  _MuteButton(pool: _pool)
                 else
                   const SizedBox(width: kMinTouchTarget),
                 Expanded(
@@ -202,14 +205,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
                           ),
                         ),
                 ),
-                ListenableBuilder(
-                  listenable: _pool,
-                  builder: (context, _) => IconButton(
-                    tooltip: _pool.muted ? 'Activer le son' : 'Couper le son',
-                    onPressed: _pool.toggleMute,
-                    icon: Icon(_pool.muted ? AppIcons.soundOff : AppIcons.soundOn, color: Colors.white),
-                  ),
-                ),
+                if (widget.showTitle || widget.onBack != null) _MuteButton(pool: _pool) else const SizedBox(width: kMinTouchTarget),
               ],
             ),
           ),
@@ -270,6 +266,22 @@ class _FeedSkeleton extends StatelessWidget {
           ),
         ],
       ),
+    ),
+  );
+}
+
+class _MuteButton extends StatelessWidget {
+  const _MuteButton({required this.pool});
+
+  final VideoPool pool;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: pool,
+    builder: (context, _) => IconButton(
+      tooltip: pool.muted ? 'Activer le son' : 'Couper le son',
+      onPressed: pool.toggleMute,
+      icon: Icon(pool.muted ? AppIcons.soundOff : AppIcons.soundOn, color: Colors.white, shadows: const [Shadow(color: Color(0x99000000), blurRadius: 6)]),
     ),
   );
 }

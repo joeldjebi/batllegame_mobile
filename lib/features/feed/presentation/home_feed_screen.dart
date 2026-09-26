@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/motion.dart';
 import '../../../core/theme/tokens.dart';
@@ -66,6 +68,21 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                     const SizedBox(width: Space.xl),
                     _TopTab(label: 'Pour toi', selected: _tab == 1, onTap: () => _show(1)),
                   ],
+                ),
+              ),
+              // Search, top right as on TikTok.
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + Space.xs,
+                right: Space.sm,
+                child: IconButton(
+                  tooltip: 'Rechercher',
+                  onPressed: () => context.push('/recherche'),
+                  icon: const Icon(
+                    AppIcons.search,
+                    color: Colors.white,
+                    size: 24,
+                    shadows: [Shadow(color: Color(0x99000000), blurRadius: 6)],
+                  ),
                 ),
               ),
             ],

@@ -21,6 +21,7 @@ import '../../features/jury/presentation/jury_entry_screen.dart';
 import '../../features/jury/presentation/jury_home_screen.dart';
 import '../../features/jury/presentation/jury_matches_screen.dart';
 import '../../features/jury/presentation/jury_preselection_screen.dart';
+import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 import '../../features/shell/presentation/tabs.dart';
@@ -104,6 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/competitions/:slug/paiement', builder: (_, state) => PaymentScreen(slug: state.pathParameters['slug']!)),
       GoRoute(path: '/profil/modifier', builder: (_, _) => const EditProfileScreen()),
       GoRoute(path: '/reglages', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/recherche', builder: (_, state) => SearchScreen(initialQuery: state.uri.queryParameters['q'] ?? '')),
       GoRoute(
         path: '/lecture',
         builder: (_, state) {
