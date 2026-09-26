@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('keeps the file extension in media cache keys (iOS needs it)', () {
-    expect(mediaFileKey('preselection-24', 'https://s3.wasabisys.com/b/preselections/9/abc.mp4?X-Amz-Signature=1'), 'preselection-24.mp4');
-    expect(mediaFileKey('media-3', 'http://127.0.0.1/storage/x/y.MOV'), 'media-3.mov');
-    expect(mediaFileKey('media-4', 'http://127.0.0.1/stream'), 'media-4');
+    expect(mediaFileKey('preselection-24', 'https://s3.wasabisys.com/b/preselections/9/abc.mp4?X-Amz-Signature=1'), matches(RegExp(r'^preselection-24-[a-z0-9]+\.mp4$')));
+    expect(mediaFileKey('media-3', 'http://127.0.0.1/storage/x/y.MOV'), matches(RegExp(r'^media-3-[a-z0-9]+\.mov$')));
+    expect(mediaFileKey('media-4', 'http://127.0.0.1/stream'), matches(RegExp(r'^media-4-[a-z0-9]+$')));
   });
 
   test('parses the editor HTML into blocks and decodes entities', () {

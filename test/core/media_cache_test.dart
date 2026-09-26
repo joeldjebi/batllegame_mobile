@@ -12,6 +12,18 @@ void main() {
   setUp(() async => dir = await Directory.systemTemp.createTemp('media'));
   tearDown(() => dir.delete(recursive: true));
 
+  test('keys a file by id and storage path: stable across signed URLs, new when the file is replaced', () {
+    const first = 'https://s3.example/battle-game/submissions/3/a1b2.mp4?X-Amz-Signature=one';
+    const resigned = 'https://s3.example/battle-game/submissions/3/a1b2.mp4?X-Amz-Signature=two';
+    const replaced = 'https://s3.example/battle-game/submissions/3/c3d4.mp4?X-Amz-Signature=one';
+
+    expect(mediaFileKey('media-12', first), mediaFileKey('media-12', resigned));
+    expect(mediaFileKey('media-12', first), isNot(mediaFileKey('media-12', replaced)));
+    expect(mediaFileKey('media-12', first), startsWith('media-12-'));
+    expect(mediaFileKey('media-12', first), endsWith('.mp4'));
+    expect(mediaFileKey('media-12', 'https://x/poster-1.jpg'), endsWith('.jpg'));
+  });
+
   test('downloads once for concurrent requests, completes, then serves the disk copy', () async {
     final server = FakeServer((_) => reply(200, 'poster-bytes'));
     final cache = MediaCache(dio: Dio()..httpClientAdapter = server, directory: () async => dir);

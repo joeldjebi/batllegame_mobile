@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../media/media_cache.dart';
 import '../providers.dart';
 import '../theme/tokens.dart';
 
@@ -32,15 +33,19 @@ class _CachedImageState extends ConsumerState<CachedImage> {
   @override
   void didUpdateWidget(CachedImage old) {
     super.didUpdateWidget(old);
-    if (old.cacheKey != widget.cacheKey) {
+    if (old.cacheKey != widget.cacheKey || _key(old) != _key(widget)) {
       _file = null;
       _load();
     }
   }
 
+  /// Versioned by the image path: a new poster is never read from the old cached one.
+  static String _key(CachedImage image) => image.url == null ? image.cacheKey : mediaFileKey(image.cacheKey, image.url!);
+
   Future<void> _load() async {
     final cache = ref.read(mediaCacheProvider);
-    final file = await cache.file(widget.cacheKey) ?? (widget.url == null ? null : await cache.fetch(widget.cacheKey, widget.url!));
+    final key = _key(widget);
+    final file = await cache.file(key) ?? (widget.url == null ? null : await cache.fetch(key, widget.url!));
     if (mounted && file != null) setState(() => _file = file);
   }
 

@@ -4,12 +4,27 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Cache key of a media file: its id + the extension of its URL (`.mp4`, `.mov`…).
-/// Players need the extension to recognise the format of a local file (iOS refuses
-/// a video file without one).
+/// Cache key of a media file: its id, a version from its storage path, and the
+/// extension of its URL (`.mp4`, `.mov`…).
+///
+/// The path is the same for every signed URL of a file but changes when the file is
+/// replaced (new take, optimized copy): a replaced video is never read from an old
+/// cached copy. Players need the extension to recognise the format of a local file
+/// (iOS refuses a video file without one).
 String mediaFileKey(String id, String url) {
-  final ext = RegExp(r'\.([A-Za-z0-9]{2,4})$').firstMatch(Uri.tryParse(url)?.path ?? '')?.group(1)?.toLowerCase();
-  return ext == null ? id : '$id.$ext';
+  final path = Uri.tryParse(url)?.path ?? '';
+  final ext = RegExp(r'\.([A-Za-z0-9]{2,4})$').firstMatch(path)?.group(1)?.toLowerCase();
+  final key = path.isEmpty ? id : '$id-${_fnv1a(path)}';
+  return ext == null ? key : '$key.$ext';
+}
+
+/// Stable 32-bit FNV-1a hash (String.hashCode may change between runs).
+String _fnv1a(String value) {
+  var hash = 0x811c9dc5;
+  for (final unit in value.codeUnits) {
+    hash = ((hash ^ unit) * 0x01000193) & 0xffffffff;
+  }
+  return hash.toRadixString(36);
 }
 
 /// Disk cache of videos and posters, keyed by the media **id** (signed URLs change
