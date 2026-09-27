@@ -2,6 +2,7 @@ import 'package:battlegame/core/network/resource.dart';
 import 'package:battlegame/core/theme/app_theme.dart';
 import 'package:battlegame/core/utils/labels.dart';
 import 'package:battlegame/core/widgets/hold_to_vote.dart';
+import 'package:battlegame/core/widgets/vote_celebration.dart';
 import 'package:battlegame/features/battles/data/battles.dart';
 import 'package:battlegame/features/battles/presentation/battles_view.dart';
 import 'package:flutter/material.dart';
@@ -76,11 +77,7 @@ void main() {
       'artists': <dynamic>[],
     };
     final open = BattleBoard.fromJson({
-      'data': [
-        for (var i = 1; i <= 5; i++) battle(i, 'a', myVote: i == 1 ? 10 : null),
-        for (var i = 6; i <= 8; i++) battle(i, 'b'),
-        battle(9, 'c'),
-      ],
+      'data': [for (var i = 1; i <= 5; i++) battle(i, 'a', myVote: i == 1 ? 10 : null), for (var i = 6; i <= 8; i++) battle(i, 'b'), battle(9, 'c')],
     }).open;
 
     final draw = shuffleBattles(open, 7);
@@ -179,7 +176,10 @@ void main() {
           battlesProvider.overrideWith((ref) => Stream.value(Resource(data: board))),
           battleShuffleProvider.overrideWith((ref) => seed),
         ],
-        child: MaterialApp(theme: AppTheme.dark(), home: const Scaffold(body: BattlesView(visible: false))),
+        child: MaterialApp(
+          theme: AppTheme.dark(),
+          home: const Scaffold(body: BattlesView(visible: false)),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -199,5 +199,53 @@ void main() {
     expect(find.text('Compétition b'), findsOneWidget);
     expect(find.text('Poule suivante'), findsNothing);
     expect(find.text('Artiste 3-7').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('after a vote: a short animation, then « Merci » with a way to share', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => celebrateVote(context, artist: 'Awa', competition: 'Abidjan Rap', shareUrl: 'https://x/#match-5'),
+              child: const Text('go'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.bySemanticsLabel('Vote enregistré'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Merci pour ton vote'), findsOneWidget);
+    expect(find.text('Partager pour soutenir Awa'), findsOneWidget);
+    await tester.tap(find.text('Continuer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Merci pour ton vote'), findsNothing);
+  });
+
+  testWidgets('offline: the vote is said to be waiting for the network', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => celebrateVote(context, artist: 'Awa', competition: 'Abidjan Rap', shareUrl: 'u', offline: true),
+              child: const Text('go'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Vote en attente'), findsOneWidget);
+    expect(find.textContaining('dès le retour du réseau'), findsOneWidget);
   });
 }

@@ -21,6 +21,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/hold_to_vote.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/toast.dart';
+import '../../../core/widgets/vote_celebration.dart';
 import '../data/battles.dart';
 
 const _shadow = [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(0, 1))];
@@ -245,9 +246,12 @@ Future<void> voteIn(BuildContext context, WidgetRef ref, Battle battle, BattleAr
     action: () async {
       await ref.read(battleVotesProvider.notifier).vote(battle, artist);
       if (context.mounted) {
-        showToast(
+        await celebrateVote(
           context,
-          ref.read(networkStatusProvider) ? 'Vote enregistré pour ${artist.stageName}.' : 'Hors ligne : ton vote sera envoyé au retour du réseau.',
+          artist: artist.stageName,
+          competition: battle.competitionName,
+          shareUrl: battle.shareUrl,
+          offline: !ref.read(networkStatusProvider),
         );
       }
     },

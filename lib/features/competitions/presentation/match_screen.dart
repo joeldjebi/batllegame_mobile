@@ -21,6 +21,7 @@ import '../../../core/widgets/live_channel.dart';
 import '../../../core/widgets/resource_view.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/toast.dart';
+import '../../../core/widgets/vote_celebration.dart';
 import '../../feed/data/feed_item.dart';
 import '../data/models.dart';
 import '../data/providers.dart';
@@ -54,9 +55,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     _results = ref.read(outboxProvider).results.listen((result) {
       if (result.id != _pendingId || !mounted) return;
       setState(() => _pendingId = null);
-      if (result.succeeded) {
-        showToast(context, 'Vote enregistré.');
-      } else {
+      // Success is celebrated when the vote is cast (celebrateVote); only a refusal is told here.
+      if (!result.succeeded) {
         setState(() => _votedFor = null);
         ref.read(databaseProvider).deleteValue(_voteKey);
         showToast(context, result.error!.message);
@@ -91,7 +91,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       _votedFor = slot.participantId;
       _pendingId = id;
     });
-    if (!ref.read(networkStatusProvider)) showToast(context, 'Hors ligne : ton vote sera envoyé au retour du réseau.');
+    await celebrateVote(context, artist: slot.stageName, competition: ref.read(competitionProvider(widget.slug)).valueOrNull?.data?.name ?? 'Battle Game', shareUrl: match.shareUrl, offline: !ref.read(networkStatusProvider));
   }
 
   @override
