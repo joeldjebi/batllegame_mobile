@@ -31,6 +31,12 @@ abstract final class AppIcons {
 
   // Media.
   static const IconData play = IconData(0xe3d0, fontFamily: 'PhosphorFill'); // play
+  static const IconData pause = IconData(0xe39e, fontFamily: 'PhosphorFill'); // pause
+  static const IconData fullscreen = IconData(0xe1d0, fontFamily: 'PhosphorRegular'); // cornersOut
+  static const IconData fullscreenExit = IconData(0xe1ce, fontFamily: 'PhosphorRegular'); // cornersIn
+  static const IconData rewind = IconData(0xe038, fontFamily: 'PhosphorRegular'); // arrowCounterClockwise
+  static const IconData forwardTen = IconData(0xe036, fontFamily: 'PhosphorRegular'); // arrowClockwise
+  static const IconData speed = IconData(0xe628, fontFamily: 'PhosphorRegular'); // gauge
   static const IconData playOutline = IconData(0xe3d0, fontFamily: 'PhosphorRegular'); // play
   static const IconData soundOn = IconData(0xe44a, fontFamily: 'PhosphorRegular'); // speakerHigh
   static const IconData soundOff = IconData(0xe45a, fontFamily: 'PhosphorRegular'); // speakerSlash

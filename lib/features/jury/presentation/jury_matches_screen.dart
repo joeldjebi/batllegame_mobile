@@ -15,9 +15,9 @@ import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/offline_banner.dart';
 import '../../../core/widgets/resource_view.dart';
+import '../../../core/widgets/review_player.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/toast.dart';
-import '../../competitions/presentation/match_screen.dart';
 import '../data/pending_scores.dart';
 import '../data/providers.dart';
 import 'jury_scope.dart';
@@ -148,7 +148,7 @@ class _JuryMatchScreenState extends ConsumerState<JuryMatchScreen> {
                                     borderRadius: BorderRadius.circular(Radii.md),
                                     child: ColoredBox(
                                       color: Colors.black,
-                                      child: AspectRatio(aspectRatio: 16 / 9, child: MediaPlayer(cacheKey: 'media-${artist.media!.id}', media: artist.media!.media)),
+                                      child: AspectRatio(aspectRatio: 16 / 9, child: ReviewPlayer(cacheKey: 'media-${artist.media!.id}', media: artist.media!.media, title: artist.stageName)),
                                     ),
                                   )
                                 else

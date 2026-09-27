@@ -13,8 +13,8 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/offline_banner.dart';
 import '../../../core/widgets/resource_view.dart';
+import '../../../core/widgets/review_player.dart';
 import '../../../core/widgets/toast.dart';
-import '../../competitions/presentation/match_screen.dart';
 import '../data/models.dart';
 import '../data/pending_scores.dart';
 import '../data/providers.dart';
@@ -112,7 +112,7 @@ class _JuryEntryScreenState extends ConsumerState<JuryEntryScreen> {
                                   color: Colors.black,
                                   child: AspectRatio(
                                     aspectRatio: detail.entry.media.isPortrait ? 4 / 5 : 16 / 9,
-                                    child: MediaPlayer(key: ValueKey(detail.entry.id), cacheKey: 'preselection-${detail.entry.id}', media: detail.entry.media),
+                                    child: ReviewPlayer(key: ValueKey(detail.entry.id), cacheKey: 'preselection-${detail.entry.id}', media: detail.entry.media, title: detail.entry.stageName),
                                   ),
                                 ),
                               ),
