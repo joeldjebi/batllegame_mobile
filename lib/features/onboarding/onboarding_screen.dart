@@ -84,7 +84,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _finish,
-                  child: Text('Passer', style: text.titleSmall?.copyWith(color: Colors.white70)),
+                  child: Text('Passer', style: text.titleSmall?.copyWith(color: Colors.white)),
                 ),
               ),
               Expanded(
@@ -124,7 +124,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Brand.primary, shape: const StadiumBorder()),
                         onPressed: _next,
-                        child: Text(_page == _count - 1 ? 'C\'est parti' : 'Suivant', style: text.titleMedium?.copyWith(color: Brand.primary, fontWeight: FontWeight.w700)),
+                        child: Text(
+                          _page == _count - 1 ? 'C\'est parti' : 'Suivant',
+                          style: text.titleMedium?.copyWith(color: Brand.primary, fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ],
@@ -148,26 +151,36 @@ class _Intro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Space.xxl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 132,
-            height: 132,
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), shape: BoxShape.circle),
-            child: Icon(icon, size: 60, color: Colors.white),
+    // Scrolls when the text is large or the phone small.
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: Space.xxl),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 132,
+                height: 132,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), shape: BoxShape.circle),
+                child: Icon(icon, size: 60, color: Colors.white),
+              ),
+              const SizedBox(height: Space.xxl),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+              ),
+              const SizedBox(height: Space.md),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: theme.bodyLarge?.copyWith(color: Colors.white.withValues(alpha: 0.9), height: 1.4),
+              ),
+            ],
           ),
-          const SizedBox(height: Space.xxl),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: theme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-          ),
-          const SizedBox(height: Space.md),
-          Text(text, textAlign: TextAlign.center, style: theme.bodyLarge?.copyWith(color: Colors.white.withValues(alpha: 0.85), height: 1.4)),
-        ],
+        ),
       ),
     );
   }
@@ -192,7 +205,11 @@ class _PreferencesState extends ConsumerState<_Preferences> {
       padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
       children: [
         const SizedBox(height: Space.xl),
-        Text('Ce que tu aimes', textAlign: TextAlign.center, style: theme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
+        Text(
+          'Ce que tu aimes',
+          textAlign: TextAlign.center,
+          style: theme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(height: Space.sm),
         Text(
           'Les compétitions de ces disciplines passent en premier. Tu pourras changer plus tard.',
@@ -224,7 +241,10 @@ class _PreferencesState extends ConsumerState<_Preferences> {
             children: [
               const Icon(AppIcons.activity, color: Colors.white, size: 28),
               const SizedBox(height: Space.sm),
-              Text('Reste informé', style: theme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+              Text(
+                'Reste informé',
+                style: theme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: Space.xs),
               Text(
                 'Rappels avant la fin d\'un vote ou d\'un envoi, validation de tes prestations, résultats.',
@@ -234,7 +254,11 @@ class _PreferencesState extends ConsumerState<_Preferences> {
               const SizedBox(height: Space.md),
               if (_notifications == null)
                 OutlinedButton(
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white70), shape: const StadiumBorder()),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    shape: const StadiumBorder(),
+                  ),
                   onPressed: () async {
                     final granted = await ref.read(localNotifierProvider).requestPermission();
                     if (mounted) setState(() => _notifications = granted);

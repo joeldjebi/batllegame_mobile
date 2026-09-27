@@ -112,7 +112,6 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
       ),
     );
   }
-
 }
 
 /// The open battles by competition, competitions and battles in a random order drawn
@@ -164,42 +163,35 @@ class _BattleHeader extends StatelessWidget {
               style: context.text.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 2),
-            Row(
+            // Wraps on a small phone or with a large text size.
+            Wrap(
+              spacing: Space.md,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Flexible(
-                  child: Text(
-                    where,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(where, style: context.text.labelMedium?.copyWith(color: Colors.white70)),
+                if (battle.closesAt != null)
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Icon(AppIcons.pending, size: 13, color: Colors.white70),
+                        ),
+                        TextSpan(text: ' Ferme ${Labels.remaining(battle.closesAt!)}'),
+                      ],
+                    ),
                     style: context.text.labelMedium?.copyWith(color: Colors.white70),
                   ),
-                ),
-                if (battle.closesAt != null) ...[
-                  const SizedBox(width: Space.md),
-                  const Icon(AppIcons.pending, size: 13, color: Colors.white70),
-                  const SizedBox(width: 4),
-                  Text('Ferme ${Labels.remaining(battle.closesAt!)}', style: context.text.labelMedium?.copyWith(color: Colors.white70)),
-                ],
+                if (nav != null && nav!.total > 1)
+                  Text('${nav!.total} ${battle.isGroup ? 'poules' : 'battles'} en vote', style: context.text.labelMedium?.copyWith(color: Colors.white70)),
               ],
             ),
-            const SizedBox(height: Space.sm),
-            Row(
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: Space.sm,
               children: [
-                if (nav != null && nav!.total > 1) ...[
-                  Text(
-                    '${nav!.total} ${battle.isGroup ? 'poules' : 'battles'} en vote',
-                    style: context.text.labelSmall?.copyWith(color: Colors.white60),
-                  ),
-                  const Spacer(),
-                  _HeaderButton(label: battle.isGroup ? 'Poule suivante' : 'Battle suivante', onTap: nav!.onNext),
-                  const SizedBox(width: Space.sm),
-                ] else
-                  const Spacer(),
-                _HeaderButton(
-                  label: 'Programme complet',
-                  filled: true,
-                  onTap: () => context.push('/competitions/${battle.competitionSlug}?onglet=phases'),
-                ),
+                if (nav != null && nav!.total > 1) _HeaderButton(label: battle.isGroup ? 'Poule suivante' : 'Battle suivante', onTap: nav!.onNext),
+                _HeaderButton(label: 'Programme complet', filled: true, onTap: () => context.push('/competitions/${battle.competitionSlug}?onglet=phases')),
               ],
             ),
           ],
@@ -217,20 +209,33 @@ class _HeaderButton extends StatelessWidget {
   final bool filled;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap == null
-        ? null
-        : () {
-            HapticFeedback.selectionClick();
-            onTap!();
-          },
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: 6),
-      decoration: BoxDecoration(
-        color: filled ? Colors.white : Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(Radii.pill),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    excludeSemantics: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onTap!();
+            },
+      // 48 pt tall to touch, the pill inside stays small.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        child: Center(
+          widthFactor: 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: 6),
+            decoration: BoxDecoration(color: filled ? Colors.white : Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(Radii.pill)),
+            child: Text(
+              label,
+              style: context.text.labelMedium?.copyWith(color: filled ? Colors.black : Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
       ),
-      child: Text(label, style: context.text.labelMedium?.copyWith(color: filled ? Colors.black : Colors.white, fontWeight: FontWeight.w700)),
     ),
   );
 }
@@ -494,44 +499,62 @@ class GroupTile extends ConsumerWidget {
 
     return ColoredBox(
       color: Colors.black,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BattleHeader(battle: battle, nav: nav),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.lg, Space.sm),
-            child: Text(
-              battle.votedInPhase ? 'Tu as déjà voté dans cette phase.' : 'Un seul vote pour toute la phase : touche une prestation pour la regarder.',
-              style: context.text.bodySmall?.copyWith(color: Colors.white70),
+      child: LayoutBuilder(
+        builder: (context, page) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // At most half the page (large text, small phone): the grid keeps the rest.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: page.maxHeight * 0.5),
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _BattleHeader(battle: battle, nav: nav),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.lg, Space.sm),
+                      child: Text(
+                        battle.votedInPhase
+                            ? 'Tu as déjà voté dans cette phase.'
+                            : 'Un seul vote pour toute la phase : touche une prestation pour la regarder.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.bodySmall?.copyWith(color: Colors.white70),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          Expanded(
-            // The whole group fits on the page: the grid never scrolls, so a vertical
-            // swipe anywhere moves to the next battle.
-            child: LayoutBuilder(
-              builder: (context, box) {
-                final count = battle.artists.length;
-                final columns = count > 6 ? 3 : (count > 1 ? 2 : 1);
-                final rows = (count / columns).ceil().clamp(1, 99);
-                const padding = EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.xl);
-                final width = (box.maxWidth - padding.horizontal - (columns - 1) * Space.md) / columns;
-                final height = (box.maxHeight - padding.vertical - (rows - 1) * Space.md) / rows;
-                return GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: padding,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    mainAxisSpacing: Space.md,
-                    crossAxisSpacing: Space.md,
-                    childAspectRatio: height > 0 ? (width / height).clamp(0.45, 4.0) : 0.62,
-                  ),
-                  itemCount: count,
-                  itemBuilder: (context, i) => _groupCell(context, ref, battle, battle.artists[i], voted, canVote),
-                );
-              },
+            Expanded(
+              // The whole group fits on the page: the grid never scrolls, so a vertical
+              // swipe anywhere moves to the next battle.
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final count = battle.artists.length;
+                  final columns = count > 6 ? 3 : (count > 1 ? 2 : 1);
+                  final rows = (count / columns).ceil().clamp(1, 99);
+                  const padding = EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.xl);
+                  final width = (box.maxWidth - padding.horizontal - (columns - 1) * Space.md) / columns;
+                  final height = (box.maxHeight - padding.vertical - (rows - 1) * Space.md) / rows;
+                  return GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: padding,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: Space.md,
+                      crossAxisSpacing: Space.md,
+                      childAspectRatio: height > 0 ? (width / height).clamp(0.45, 4.0) : 0.62,
+                    ),
+                    itemCount: count,
+                    itemBuilder: (context, i) => _groupCell(context, ref, battle, battle.artists[i], voted, canVote),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

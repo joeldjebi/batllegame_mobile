@@ -81,7 +81,6 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.colors;
     final following = ref.watch(followStateProvider)[artist.participantId] ?? artist.following;
     // Shown at once: the count moves with the button, before the server confirms.
     final followers = artist.followersCount + (following == artist.following ? 0 : (following ? 1 : -1));
@@ -96,13 +95,14 @@ class _Header extends ConsumerWidget {
           style: context.text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
         ),
         const SizedBox(height: Space.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Wraps with a large text size.
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: Space.xxl,
+          runSpacing: Space.md,
           children: [
             _Stat(value: followers, label: followers > 1 ? 'abonnés' : 'abonné'),
-            Container(width: 1, height: 28, margin: const EdgeInsets.symmetric(horizontal: Space.xl), color: c.border),
             _Stat(value: artist.performancesCount, label: artist.performancesCount > 1 ? 'prestations' : 'prestation'),
-            Container(width: 1, height: 28, margin: const EdgeInsets.symmetric(horizontal: Space.xl), color: c.border),
             _Stat(value: artist.participations.length, label: artist.participations.length > 1 ? 'compétitions' : 'compétition'),
           ],
         ),
