@@ -84,49 +84,66 @@ class _HoldToVoteState extends State<HoldToVote> with SingleTickerProviderStateM
         onPointerCancel: (_) => _cancel(),
         child: AnimatedBuilder(
           animation: _hold,
-          builder: (context, _) => Container(
-            height: height,
-            padding: const EdgeInsets.symmetric(horizontal: Space.md),
-            decoration: BoxDecoration(
-              color: widget.voted ? c.success : (active ? Colors.white : Colors.white24),
-              borderRadius: BorderRadius.circular(Radii.pill),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // The fill of the hold, left to right (solid, no gradient).
-                if (_hold.value > 0)
-                  Positioned.fill(
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: _hold.value,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(Radii.pill)),
-                      ),
+          builder: (context, _) {
+            final fill = _hold.value;
+            Widget label(Color color) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.md),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(widget.voted ? AppIcons.done : AppIcons.vote, size: widget.compact ? 15 : 17, color: color),
+                  const SizedBox(width: Space.xs + 2),
+                  Flexible(
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: (widget.compact ? context.text.labelMedium : context.text.labelLarge)?.copyWith(color: color),
                     ),
                   ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                ],
+              ),
+            );
+            // The fill runs edge to edge inside the pill (clipped to its shape), and the
+            // label turns white exactly where the fill has passed: one gauge, no jump.
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(Radii.pill),
+              child: Container(
+                height: height,
+                color: widget.voted ? c.success : (active ? Colors.white : Colors.white24),
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Icon(widget.voted ? AppIcons.done : AppIcons.vote, size: widget.compact ? 15 : 17, color: _fg(c, active)),
-                    const SizedBox(width: Space.xs + 2),
-                    Flexible(
-                      child: Text(
-                        text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: (widget.compact ? context.text.labelMedium : context.text.labelLarge)?.copyWith(color: _fg(c, active)),
+                    if (fill > 0)
+                      FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: fill,
+                        child: ColoredBox(color: c.primary),
                       ),
-                    ),
+                    label(_fg(c, active)),
+                    if (fill > 0) ClipRect(clipper: _LeftPart(fill), child: label(Colors.white)),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Color _fg(AppColors c, bool active) => widget.voted || _hold.value > 0.5 ? Colors.white : (active ? const Color(0xFF0B0B12) : Colors.white70);
+  Color _fg(AppColors c, bool active) => widget.voted ? Colors.white : (active ? const Color(0xFF0B0B12) : Colors.white70);
+}
+
+/// The left [fraction] of the button (the part the fill has covered).
+class _LeftPart extends CustomClipper<Rect> {
+  const _LeftPart(this.fraction);
+
+  final double fraction;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTWH(0, 0, size.width * fraction, size.height);
+
+  @override
+  bool shouldReclip(_LeftPart old) => old.fraction != fraction;
 }
