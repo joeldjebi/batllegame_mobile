@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/tokens.dart';
@@ -77,7 +78,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                       else
                         GroupedSection(
                           header: '${page.items.length} compétition${page.items.length > 1 ? 's' : ''}',
-                          children: [for (final competition in page.items) CompetitionCard(competition: competition)],
+                          children: [for (final competition in _favoritesFirst(page.items, ref.watch(favoriteDisciplinesProvider))) CompetitionCard(competition: competition)],
                         ),
                     ],
                   ),
@@ -90,6 +91,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 }
+
+/// The competitions of the favorite disciplines first (order kept otherwise).
+List<CompetitionSummary> _favoritesFirst(List<CompetitionSummary> items, Set<String> favorites) => favorites.isEmpty
+    ? items
+    : [...items.where((c) => favorites.contains(c.discipline)), ...items.where((c) => !favorites.contains(c.discipline))];
 
 /// Status filter, the iOS segmented control way.
 class _Segmented extends StatelessWidget {

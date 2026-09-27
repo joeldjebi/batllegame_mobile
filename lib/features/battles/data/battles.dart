@@ -26,6 +26,7 @@ class Battle {
     required this.competitionName,
     required this.shareUrl,
     required this.artists,
+    this.discipline,
     this.stage,
     this.closesAt,
     this.voteCodeRequired = false,
@@ -43,6 +44,7 @@ class Battle {
       stage: json['stage'] as String?,
       competitionSlug: competition['slug'] as String,
       competitionName: competition['name'] as String,
+      discipline: competition['discipline'] as String?,
       closesAt: parseDate(json['voting_closes_at']),
       voteCodeRequired: json['vote_code_required'] == true,
       shareUrl: (json['share_url'] as String?) ?? '',
@@ -68,6 +70,9 @@ class Battle {
   final String? stage;
   final String competitionSlug;
   final String competitionName;
+
+  /// The competition's discipline (favorite disciplines come first).
+  final String? discipline;
   final DateTime? closesAt;
   final bool voteCodeRequired;
   final String shareUrl;

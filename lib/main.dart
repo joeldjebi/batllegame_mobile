@@ -17,6 +17,9 @@ Future<void> main() async {
   // The session opens from the vault + the cached profile: no network needed to start.
   final container = ProviderContainer();
   await container.read(sessionProvider.notifier).restore();
+  // First launch: the welcome screens (skipped by automated tests: SKIP_ONBOARDING).
+  const skip = bool.fromEnvironment('SKIP_ONBOARDING');
+  container.read(onboardedProvider.notifier).state = skip || await container.read(databaseProvider).readValue('onboarded') != null;
   // Uploads sent before the app was closed come back (does not delay the start).
   unawaited(container.read(uploadsProvider.notifier).start().catchError((Object _) {}));
 

@@ -86,6 +86,16 @@ void main() {
     expect(shuffleBattles(open, 7).map((c) => c.first.competitionSlug), draw.map((c) => c.first.competitionSlug)); // Same seed, same draw.
 
     final firstCompetitions = {for (var seed = 0; seed < 30; seed++) shuffleBattles(open, seed).first.first.competitionSlug};
+    // Favorite disciplines first, whatever the draw.
+    final favored = BattleBoard.fromJson({
+      'data': [
+        {'id': 20, 'is_group': true, 'title': 'P', 'competition': {'id': 2, 'slug': 'danse', 'name': 'd', 'discipline': 'autre'}, 'artists': <dynamic>[]},
+        {'id': 21, 'is_group': true, 'title': 'P', 'competition': {'id': 3, 'slug': 'slam', 'name': 's', 'discipline': 'slam'}, 'artists': <dynamic>[]},
+      ],
+    }).open;
+    for (var seed = 0; seed < 10; seed++) {
+      expect(shuffleBattles(favored, seed, favorites: {'slam'}).first.first.competitionSlug, 'slam');
+    }
     final firstGroupsOfA = {for (var seed = 0; seed < 30; seed++) shuffleBattles(open, seed).firstWhere((c) => c.first.competitionSlug == 'a').first.id};
     expect(firstCompetitions.length, greaterThan(1));
     expect(firstGroupsOfA.length, greaterThan(1));

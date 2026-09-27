@@ -22,6 +22,7 @@ import '../../features/jury/presentation/jury_entry_screen.dart';
 import '../../features/jury/presentation/jury_home_screen.dart';
 import '../../features/jury/presentation/jury_matches_screen.dart';
 import '../../features/jury/presentation/jury_preselection_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
@@ -35,6 +36,7 @@ import '../providers.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen<SessionState>(sessionProvider, (_, _) => refresh.value++);
+  ref.listen<bool>(onboardedProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -45,6 +47,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final user = session.user;
       final path = state.matchedLocation;
       final onAuth = path.startsWith('/auth');
+
+      // First launch: the welcome screens first.
+      if (!ref.read(onboardedProvider)) return path == '/bienvenue' ? null : '/bienvenue';
+      if (path == '/bienvenue') return '/';
 
       if (user == null) {
         const private = ['/auth/verification', '/auth/mot-de-passe', '/jury', '/profil/modifier'];
@@ -106,6 +112,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/competitions/:slug/paiement', builder: (_, state) => PaymentScreen(slug: state.pathParameters['slug']!)),
       GoRoute(path: '/profil/modifier', builder: (_, _) => const EditProfileScreen()),
       GoRoute(path: '/reglages', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/bienvenue', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/artistes/:id', builder: (_, state) => ArtistScreen(participantId: int.parse(state.pathParameters['id']!))),
       GoRoute(path: '/artistes-suivis', builder: (_, _) => const FollowingScreen()),
       GoRoute(path: '/recherche', builder: (_, state) => SearchScreen(initialQuery: state.uri.queryParameters['q'] ?? '')),

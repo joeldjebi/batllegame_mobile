@@ -5,6 +5,7 @@ import '../../core/config/env.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/utils/labels.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/toast.dart';
 
@@ -64,6 +65,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: Space.xs),
           Text('Le fil vidéo reste sur fond noir pour mieux regarder les prestations.', style: context.text.bodySmall),
+          const SizedBox(height: Space.xl),
+          Text('Disciplines préférées', style: context.text.titleMedium),
+          const SizedBox(height: Space.sm),
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: [
+              for (final d in const ['rap', 'chant', 'freestyle', 'slam', 'beatbox', 'autre'])
+                FilterChip(
+                  label: Text(Labels.discipline(d)),
+                  selected: ref.watch(favoriteDisciplinesProvider).contains(d),
+                  onSelected: (_) => ref.read(favoriteDisciplinesProvider.notifier).toggle(d),
+                ),
+            ],
+          ),
+          const SizedBox(height: Space.xs),
+          Text('Leurs compétitions passent en premier dans Battles et Découvrir.', style: context.text.bodySmall),
           const SizedBox(height: Space.xl),
           Text('Qualité vidéo', style: context.text.titleMedium),
           const SizedBox(height: Space.sm),

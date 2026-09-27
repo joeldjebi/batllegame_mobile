@@ -131,6 +131,30 @@ class PrefetchPreference extends StateNotifier<PrefetchMode> {
 
 final prefetchModeProvider = StateNotifierProvider<PrefetchPreference, PrefetchMode>((ref) => PrefetchPreference(ref.read(databaseProvider)));
 
+/// First launch: the welcome screens are shown until done (read before the app starts, main.dart).
+final onboardedProvider = StateProvider<bool>((ref) => true);
+
+/// Disciplines the user prefers (chosen at the first launch, Réglages): their competitions come first.
+class FavoriteDisciplines extends StateNotifier<Set<String>> {
+  FavoriteDisciplines(this._db) : super(const {}) {
+    _db.readValue(_key).then((value) {
+      if (mounted && value != null && value.isNotEmpty) state = value.split(',').toSet();
+    });
+  }
+
+  final AppDatabase _db;
+  static const String _key = 'favorite_disciplines';
+
+  Future<void> toggle(String discipline) => set(state.contains(discipline) ? ({...state}..remove(discipline)) : {...state, discipline});
+
+  Future<void> set(Set<String> disciplines) async {
+    state = disciplines;
+    await _db.writeValue(_key, disciplines.join(','));
+  }
+}
+
+final favoriteDisciplinesProvider = StateNotifierProvider<FavoriteDisciplines, Set<String>>((ref) => FavoriteDisciplines(ref.read(databaseProvider)));
+
 /// Video quality: `auto` (HD on Wi-Fi, light copy on mobile data), `hd` always, `eco` light copy always.
 enum VideoQuality { auto, hd, eco }
 

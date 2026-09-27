@@ -75,7 +75,7 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
     if (board.open.isEmpty) return UpcomingView(upcoming: board.upcoming, nothingOpen: true);
 
     final seed = ref.watch(battleShuffleProvider);
-    final competitions = shuffleBattles(board.open, seed);
+    final competitions = shuffleBattles(board.open, seed, favorites: ref.watch(favoriteDisciplinesProvider));
     final picks = ref.watch(battlePicksProvider);
 
     return RefreshIndicator(
@@ -116,14 +116,17 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
 }
 
 /// The open battles by competition, competitions and battles in a random order drawn
-/// from [seed]; in each competition the battles you can still vote in come first.
-List<List<Battle>> shuffleBattles(List<Battle> open, int seed) {
+/// from [seed] (the competitions of the [favorites] disciplines first); in each
+/// competition the battles you can still vote in come first.
+List<List<Battle>> shuffleBattles(List<Battle> open, int seed, {Set<String> favorites = const {}}) {
   final byCompetition = <String, List<Battle>>{};
   for (final battle in open) {
     byCompetition.putIfAbsent(battle.competitionSlug, () => []).add(battle);
   }
   final random = Random(seed);
-  final slugs = byCompetition.keys.toList()..shuffle(random);
+  final shuffled = byCompetition.keys.toList()..shuffle(random);
+  bool favorite(String slug) => favorites.contains(byCompetition[slug]!.first.discipline);
+  final slugs = [...shuffled.where(favorite), ...shuffled.where((s) => !favorite(s))];
   return [
     for (final slug in slugs)
       () {

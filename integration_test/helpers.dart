@@ -1,3 +1,5 @@
+// Run with --dart-define=SKIP_ONBOARDING=true: flutter test reinstalls the app, the
+// welcome screens (first launch) would otherwise come first every time.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
