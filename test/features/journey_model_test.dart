@@ -54,4 +54,34 @@ void main() {
     expect(stage.isGroup, isTrue);
     expect(stage.others.single.name, 'Bob');
   });
+
+  test('a sent pre-selection entry stays modifiable until the deadline, whatever its status', () {
+    Journey journey(String status, {bool open = true}) => Journey.fromJson({
+          'data': {
+            'competition': {'id': 1, 'slug': 'abidjan-rap', 'name': 'Abidjan Rap', 'status': 'inscriptions', 'organizer': 'Yop City'},
+            'participant': {'id': 3, 'stage_name': 'Awa', 'status': 'valide', 'paid': true, 'payment_required': false, 'awaits_approval': false},
+            'out': false,
+            'champion': false,
+            'next': null,
+            'preselection': {
+              'state': open ? 'ouverte' : 'vote',
+              'ends_at': '2026-10-02T18:00:00+00:00',
+              'selection_size': 16,
+              'can_submit': open,
+              'media_rules': {'types': ['video'], 'max_duration_seconds': 120, 'max_size_mb': 100},
+              'entry': {'id': 4, 'status': status, 'rejection_reason': null, 'likes': 0, 'media': {'type': 'video', 'url': 'u', 'poster_url': 'p'}},
+            },
+            'phases': <dynamic>[],
+          },
+        });
+
+    for (final status in ['traitement', 'en_attente', 'validee']) {
+      final next = journey(status).effectiveNext!;
+      expect(next.type, 'sent', reason: status);
+      expect(next.deadline, DateTime.parse('2026-10-02T18:00:00+00:00'));
+    }
+    expect(journey('rejetee').effectiveNext?.type, 'submit');
+    // Submissions closed: nothing to change any more.
+    expect(journey('validee', open: false).effectiveNext?.type, 'wait');
+  });
 }

@@ -189,6 +189,7 @@ class _Hero extends ConsumerWidget {
               child: Text('Échéance ${Labels.remaining(next!.deadline!)} · ${Labels.date(next.deadline)}', style: context.text.labelMedium?.copyWith(color: onBg)),
             ),
           ],
+          if (!journey.out && (next?.type == 'submit' || next?.type == 'sent')) _SubmitButton(journey: journey, next: next!),
           if (next?.type == 'vote' && next?.matchId != null && !journey.out) ...[
             const SizedBox(height: Space.lg),
             AppButton(
@@ -199,6 +200,50 @@ class _Hero extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// « Envoyer » / « Modifier ma prestation » in the header: the performance can be
+/// changed until the submission deadline, whatever its status.
+class _SubmitButton extends ConsumerWidget {
+  const _SubmitButton({required this.journey, required this.next});
+
+  final Journey journey;
+  final NextAction next;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final slug = journey.slug;
+    final pre = journey.preselection;
+    final stage = next.stageId == null ? null : journey.phases.expand((p) => p.stages).where((s) => s.id == next.stageId).firstOrNull;
+    final ({MediaRules rules, String path, String target, String label})? upload = switch (stage) {
+      final s? when s.canSubmit => (
+          rules: s.rules!,
+          path: '/competitions/$slug/stages/${s.id}/submission',
+          target: 'stage:$slug:${s.id}',
+          label: '${s.name} · ${journey.competitionName}',
+        ),
+      null when pre != null && pre.canSubmit => (
+          rules: pre.rules,
+          path: '/competitions/$slug/preselection/submission',
+          target: 'preselection:$slug',
+          label: 'Présélection · ${journey.competitionName}',
+        ),
+      _ => null,
+    };
+    if (upload == null) return const SizedBox.shrink();
+    // Already on its way: the progress shows in the card below.
+    if (ref.watch(uploadsProvider).values.any((u) => u.target == upload.target && u.active)) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.lg),
+      child: AppButton(
+        label: next.type == 'sent' ? 'Modifier ma prestation' : 'Envoyer ma prestation',
+        icon: AppIcons.video,
+        variant: AppButtonVariant.secondary,
+        onPressed: () => submitPerformance(context, ref, rules: upload.rules, path: upload.path, target: upload.target, label: upload.label),
       ),
     );
   }
@@ -262,7 +307,7 @@ class _PreselectionCard extends ConsumerWidget {
         if (preselection.canSubmit && upload?.active != true) ...[
           const SizedBox(height: Space.md),
           AppButton(
-            label: entry == null ? 'Envoyer ma prestation' : 'Remplacer ma prestation',
+            label: entry == null ? 'Envoyer ma prestation' : 'Modifier ma prestation',
             icon: AppIcons.video,
             variant: entry == null ? AppButtonVariant.primary : AppButtonVariant.secondary,
             onPressed: () => submitPerformance(
@@ -396,7 +441,7 @@ class _StageRow extends ConsumerWidget {
             if (stage.canSubmit && upload?.active != true) ...[
               const SizedBox(height: Space.md),
               AppButton(
-                label: stage.action?.type == 'sent' ? 'Remplacer ma prestation' : 'Envoyer ma prestation',
+                label: stage.action?.type == 'sent' ? 'Modifier ma prestation' : 'Envoyer ma prestation',
                 icon: AppIcons.video,
                 variant: stage.action?.type == 'sent' ? AppButtonVariant.secondary : AppButtonVariant.primary,
                 onPressed: () => submitPerformance(

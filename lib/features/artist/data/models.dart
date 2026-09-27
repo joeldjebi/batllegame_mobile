@@ -261,11 +261,11 @@ class Journey {
       );
     }
     if (entry != null && entry.status != 'rejetee') {
-      return NextAction(
-        type: 'wait',
-        stage: 'Présélection',
-        text: entry.status == 'validee' ? 'Ta prestation est en ligne. Partage-la pour recevoir des likes.' : 'Ta prestation est envoyée : l\'organisateur la vérifie.',
-      );
+      final status = entry.status == 'validee' ? 'Ta prestation est en ligne. Partage-la pour recevoir des likes.' : 'Ta prestation est envoyée : l\'organisateur la vérifie.';
+      // Until the end of the submissions, whatever its status: it can still be changed.
+      return pre.canSubmit
+          ? NextAction(type: 'sent', stage: 'Présélection', text: '$status Tu peux la modifier jusqu\'à la date limite.', deadline: pre.endsAt)
+          : NextAction(type: 'wait', stage: 'Présélection', text: status);
     }
     return null;
   }
