@@ -8,6 +8,7 @@ import 'package:battlegame/features/artists/presentation/artist_screen.dart';
 import 'package:battlegame/features/battles/data/battles.dart';
 import 'package:battlegame/features/battles/presentation/battles_view.dart';
 import 'package:battlegame/features/competitions/data/models.dart';
+import 'package:battlegame/features/competitions/data/providers.dart';
 import 'package:battlegame/features/competitions/presentation/discover_screen.dart';
 import 'package:battlegame/features/onboarding/onboarding_screen.dart';
 import 'package:flutter/material.dart';
@@ -165,6 +166,44 @@ void main() {
             ),
           ),
         ),
+        bigText: bigText,
+      ),
+    );
+
+    testWidgets(
+      'Découvrir with its carousels · $mode',
+      (tester) => checkGuidelines(
+        tester,
+        const DiscoverScreen(),
+        overrides: [
+          competitionsProvider.overrideWith(
+            (ref, status) => Stream.value(
+              Resource(
+                data: (
+                  items: [
+                    CompetitionSummary(
+                      slug: 'rap',
+                      name: 'Rap & Chant Battle Abidjan',
+                      status: 'inscriptions',
+                      discipline: 'rap',
+                      entryFee: 500,
+                      currency: 'XOF',
+                      registrationOpen: true,
+                      registrationEndsAt: DateTime.now().add(const Duration(days: 3)),
+                      organizerName: 'Abidjan Urban Music',
+                      participantsCount: 8,
+                      maxParticipants: 20,
+                      topPrize: const Prize('1er prix', '500 000 XOF'),
+                    ),
+                  ],
+                  page: 1,
+                  lastPage: 1,
+                ),
+              ),
+            ),
+          ),
+          battlesProvider.overrideWith((ref) => Stream.value(Resource(data: _board))),
+        ],
         bigText: bigText,
       ),
     );

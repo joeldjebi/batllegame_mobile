@@ -17,6 +17,10 @@ class CompetitionSummary {
     this.organizerName,
     this.organizerLogoUrl,
     this.locationLabel,
+    this.coverUrl,
+    this.participantsCount,
+    this.maxParticipants,
+    this.topPrize,
   });
 
   factory CompetitionSummary.fromJson(Map<String, dynamic> json) {
@@ -34,6 +38,12 @@ class CompetitionSummary {
       organizerName: organizer?['name'] as String?,
       organizerLogoUrl: organizer?['logo_url'] as String?,
       locationLabel: location?['label'] as String?,
+      coverUrl: json['cover_url'] as String?,
+      participantsCount: json['participants_count'] as int?,
+      maxParticipants: json['max_participants'] as int?,
+      topPrize: json['top_prize'] is Map<String, dynamic>
+          ? Prize((json['top_prize'] as Map<String, dynamic>)['rank'] as String? ?? '1er prix', (json['top_prize'] as Map<String, dynamic>)['reward'] as String? ?? '')
+          : null,
     );
   }
 
@@ -48,6 +58,15 @@ class CompetitionSummary {
   final String? organizerName;
   final String? organizerLogoUrl;
   final String? locationLabel;
+
+  /// Organizer's 16:9 cover, else a performance poster.
+  final String? coverUrl;
+  final int? participantsCount;
+  final int? maxParticipants;
+  final Prize? topPrize;
+
+  /// Places left when the competition has a maximum.
+  int? get placesLeft => maxParticipants == null || participantsCount == null ? null : (maxParticipants! - participantsCount!).clamp(0, maxParticipants!);
 }
 
 class Prize {
@@ -97,7 +116,7 @@ class CompetitionDetail extends CompetitionSummary {
     this.prizes = const [],
     this.schedule = const [],
     this.phases = const [],
-    this.maxParticipants,
+    super.maxParticipants,
   });
 
   factory CompetitionDetail.fromJson(Map<String, dynamic> json) {
@@ -138,7 +157,6 @@ class CompetitionDetail extends CompetitionSummary {
   final List<Prize> prizes;
   final List<ScheduleStep> schedule;
   final List<PhaseInfo> phases;
-  final int? maxParticipants;
 }
 
 class SlotSummary {
