@@ -65,6 +65,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: Space.xs),
           Text('Le fil vidéo reste sur fond noir pour mieux regarder les prestations.', style: context.text.bodySmall),
           const SizedBox(height: Space.xl),
+          Text('Qualité vidéo', style: context.text.titleMedium),
+          const SizedBox(height: Space.sm),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<VideoQuality>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: VideoQuality.auto, label: Text('Auto')),
+                ButtonSegment(value: VideoQuality.hd, label: Text('HD')),
+                ButtonSegment(value: VideoQuality.eco, label: Text('Économie')),
+              ],
+              selected: {ref.watch(videoQualityProvider)},
+              onSelectionChanged: (value) => ref.read(videoQualityProvider.notifier).set(value.first),
+            ),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            switch (ref.watch(videoQualityProvider)) {
+              VideoQuality.auto => 'HD en Wi-Fi, version légère en données mobiles : la vidéo démarre vite partout.',
+              VideoQuality.hd => 'Toujours la meilleure qualité, même en données mobiles (consomme plus).',
+              VideoQuality.eco => 'Toujours la version légère : moins de données, image un peu moins nette.',
+            },
+            style: context.text.bodySmall,
+          ),
+          const SizedBox(height: Space.xl),
           Text('Préchargement des vidéos', style: context.text.titleMedium),
           const SizedBox(height: Space.sm),
           RadioGroup<PrefetchMode>(

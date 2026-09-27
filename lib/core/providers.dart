@@ -131,6 +131,27 @@ class PrefetchPreference extends StateNotifier<PrefetchMode> {
 
 final prefetchModeProvider = StateNotifierProvider<PrefetchPreference, PrefetchMode>((ref) => PrefetchPreference(ref.read(databaseProvider)));
 
+/// Video quality: `auto` (HD on Wi-Fi, light copy on mobile data), `hd` always, `eco` light copy always.
+enum VideoQuality { auto, hd, eco }
+
+class VideoQualityPreference extends StateNotifier<VideoQuality> {
+  VideoQualityPreference(this._db) : super(VideoQuality.auto) {
+    _db.readValue(_key).then((value) {
+      if (mounted && value != null) state = VideoQuality.values.firstWhere((q) => q.name == value, orElse: () => VideoQuality.auto);
+    });
+  }
+
+  final AppDatabase _db;
+  static const String _key = 'video_quality';
+
+  Future<void> set(VideoQuality quality) async {
+    state = quality;
+    await _db.writeValue(_key, quality.name);
+  }
+}
+
+final videoQualityProvider = StateNotifierProvider<VideoQualityPreference, VideoQuality>((ref) => VideoQualityPreference(ref.read(databaseProvider)));
+
 /// Appearance chosen in Réglages: light by default.
 class ThemePreference extends StateNotifier<ThemeMode> {
   ThemePreference(this._db) : super(ThemeMode.light) {

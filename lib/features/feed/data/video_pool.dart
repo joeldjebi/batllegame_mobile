@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/media/media_cache.dart';
+import '../../../core/media/video_source.dart';
+import '../../../core/providers.dart';
 import 'feed_item.dart';
 
 /// Players of the feed: at most a handful alive (current, previous, next ones),
@@ -12,12 +14,16 @@ import 'feed_item.dart';
 /// is saved to disk whatever the network (watching it again never reloads it),
 /// the next ones only on Wi-Fi (or « always »); nothing with the « never » setting.
 class VideoPool extends ChangeNotifier {
-  VideoPool(this._cache, {Connectivity? connectivity, this.prefetch = _wifi}) : _connectivity = connectivity ?? Connectivity();
+  VideoPool(this._cache, {Connectivity? connectivity, this.prefetch = _wifi, this.quality = _auto}) : _connectivity = connectivity ?? Connectivity();
 
   static String _wifi() => 'wifi';
+  static VideoQuality _auto() => VideoQuality.auto;
 
   /// Data saver setting: `wifi` (default), `always`, `never`.
   final String Function() prefetch;
+
+  /// Quality setting: HD or light copy (see pickVideoSource).
+  final VideoQuality Function() quality;
 
   final MediaCache _cache;
   final Connectivity _connectivity;
@@ -58,10 +64,11 @@ class VideoPool extends ChangeNotifier {
   }
 
   Future<VideoPlayerController?> _create(FeedItem item, String url) async {
-    final key = mediaFileKey(item.key, url);
-    _sources[item.key] = (key: key, url: url);
-    final file = await _cache.file(key);
-    final player = file != null ? VideoPlayerController.file(file) : VideoPlayerController.networkUrl(Uri.parse(url));
+    final source = await pickVideoSource(_cache, item.key, item.media, quality(), connectivity: _connectivity);
+    if (source == null) return null;
+    final (:key, url: sourceUrl, :file) = source;
+    _sources[item.key] = (key: key, url: sourceUrl);
+    final player = file != null ? VideoPlayerController.file(file) : VideoPlayerController.networkUrl(Uri.parse(sourceUrl));
     try {
       await player.initialize();
     } catch (_) {
@@ -79,7 +86,7 @@ class VideoPool extends ChangeNotifier {
     notifyListeners();
 
     final mode = prefetch();
-    if (file == null && mode != 'never' && (item.key == _current || mode == 'always' || await _onWifi())) _cache.prefetch(key, url);
+    if (file == null && mode != 'never' && (item.key == _current || mode == 'always' || await _onWifi())) _cache.prefetch(key, sourceUrl);
     return player;
   }
 

@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../../core/media/media_cache.dart';
+import '../../../core/media/video_source.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -294,10 +294,11 @@ class _DuelTileState extends ConsumerState<DuelTile> {
   Future<void> _open() async {
     final cache = ref.read(mediaCacheProvider);
     for (final (i, artist) in widget.battle.artists.indexed) {
-      final url = artist.media?.url;
-      if (url == null || _players.containsKey(i)) continue;
-      final key = mediaFileKey('media-${artist.mediaId}', url);
-      final file = await cache.file(key);
+      final media = artist.media;
+      if (media == null || _players.containsKey(i)) continue;
+      final source = await pickVideoSource(cache, 'media-${artist.mediaId}', media, ref.read(videoQualityProvider));
+      if (source == null) continue;
+      final (:key, :url, :file) = source;
       final player = file != null ? VideoPlayerController.file(file) : VideoPlayerController.networkUrl(Uri.parse(url));
       try {
         await player.initialize();

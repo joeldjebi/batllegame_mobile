@@ -39,7 +39,8 @@ class _ReviewPlayerState extends ConsumerState<ReviewPlayer> {
   @override
   void initState() {
     super.initState();
-    VideoPlayerControllerHolder.open(ref.read(mediaCacheProvider), widget.cacheKey, widget.media).then((holder) async {
+    // The jury judges on the HD file.
+    VideoPlayerControllerHolder.open(ref.read(mediaCacheProvider), widget.cacheKey, widget.media, quality: VideoQuality.hd).then((holder) async {
       if (!mounted) {
         holder?.dispose();
         return;

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/media/media_cache.dart';
+import '../../../core/media/video_source.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../feed/data/feed_item.dart';
@@ -13,11 +15,12 @@ class VideoPlayerControllerHolder {
 
   final VideoPlayerController controller;
 
-  static Future<VideoPlayerControllerHolder?> open(MediaCache cache, String key, MediaInfo media) async {
-    final url = media.url;
-    if (url == null) return null;
-    key = mediaFileKey(key, url);
-    final file = await cache.file(key);
+  /// [quality]: the viewer's setting; the jury always gets HD.
+  static Future<VideoPlayerControllerHolder?> open(MediaCache cache, String key, MediaInfo media, {VideoQuality quality = VideoQuality.auto}) async {
+    final source = await pickVideoSource(cache, key, media, quality);
+    if (source == null) return null;
+    final (key: fileKey, :url, :file) = source;
+    key = fileKey;
     final controller = file != null ? VideoPlayerController.file(file) : VideoPlayerController.networkUrl(Uri.parse(url));
     try {
       await controller.initialize();

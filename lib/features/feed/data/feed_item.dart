@@ -2,11 +2,12 @@ import '../../../core/utils/labels.dart';
 
 /// A playable media (feed, match, entry).
 class MediaInfo {
-  const MediaInfo({required this.type, this.url, this.posterUrl, this.width, this.height, this.durationSeconds});
+  const MediaInfo({required this.type, this.url, this.lightUrl, this.posterUrl, this.width, this.height, this.durationSeconds});
 
   factory MediaInfo.fromJson(Map<String, dynamic> json) => MediaInfo(
     type: (json['type'] as String?) ?? 'video',
     url: json['url'] as String?,
+    lightUrl: json['light_url'] as String?,
     posterUrl: json['poster_url'] as String?,
     width: json['width'] as int?,
     height: json['height'] as int?,
@@ -15,6 +16,9 @@ class MediaInfo {
 
   final String type;
   final String? url;
+
+  /// Light copy (480p) for mobile data; null: only [url].
+  final String? lightUrl;
   final String? posterUrl;
   final int? width;
   final int? height;

@@ -39,7 +39,11 @@ class FeedView extends ConsumerStatefulWidget {
 }
 
 class _FeedViewState extends ConsumerState<FeedView> {
-  late final VideoPool _pool = VideoPool(ref.read(mediaCacheProvider), prefetch: () => ref.read(prefetchModeProvider).name);
+  late final VideoPool _pool = VideoPool(
+    ref.read(mediaCacheProvider),
+    prefetch: () => ref.read(prefetchModeProvider).name,
+    quality: () => ref.read(videoQualityProvider),
+  );
   late final AppLifecycleListener _lifecycle;
   final _pages = PageController();
   int _index = 0;

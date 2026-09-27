@@ -373,7 +373,7 @@ class _MediaPlayerState extends ConsumerState<MediaPlayer> {
   @override
   void initState() {
     super.initState();
-    VideoPlayerControllerHolder.open(ref.read(mediaCacheProvider), widget.cacheKey, widget.media).then((holder) {
+    VideoPlayerControllerHolder.open(ref.read(mediaCacheProvider), widget.cacheKey, widget.media, quality: ref.read(videoQualityProvider)).then((holder) {
       if (!mounted) {
         holder?.dispose();
         return;
