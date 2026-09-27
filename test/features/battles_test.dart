@@ -66,6 +66,34 @@ void main() {
     expect(BattleBoard.fromJson({'data': <dynamic>[]}).isEmpty, isTrue);
   });
 
+  test('shuffles competitions and groups, the groups still to vote in first', () {
+    Map<String, dynamic> battle(int id, String slug, {int? myVote}) => {
+      'id': id,
+      'is_group': true,
+      'title': 'Poule $id',
+      'competition': {'id': 1, 'slug': slug, 'name': slug},
+      'my_vote': myVote,
+      'artists': <dynamic>[],
+    };
+    final open = BattleBoard.fromJson({
+      'data': [
+        for (var i = 1; i <= 5; i++) battle(i, 'a', myVote: i == 1 ? 10 : null),
+        for (var i = 6; i <= 8; i++) battle(i, 'b'),
+        battle(9, 'c'),
+      ],
+    }).open;
+
+    final draw = shuffleBattles(open, 7);
+    expect(draw.expand((c) => c).map((b) => b.id).toSet(), {1, 2, 3, 4, 5, 6, 7, 8, 9});
+    expect(draw.firstWhere((c) => c.first.competitionSlug == 'a').last.id, 1); // Already voted: last.
+    expect(shuffleBattles(open, 7).map((c) => c.first.competitionSlug), draw.map((c) => c.first.competitionSlug)); // Same seed, same draw.
+
+    final firstCompetitions = {for (var seed = 0; seed < 30; seed++) shuffleBattles(open, seed).first.first.competitionSlug};
+    final firstGroupsOfA = {for (var seed = 0; seed < 30; seed++) shuffleBattles(open, seed).firstWhere((c) => c.first.competitionSlug == 'a').first.id};
+    expect(firstCompetitions.length, greaterThan(1));
+    expect(firstGroupsOfA.length, greaterThan(1));
+  });
+
   test('says when a vote opens', () async {
     await initializeDateFormatting('fr');
     expect(Labels.voteOpens(DateTime.now().add(const Duration(minutes: 18, seconds: 30))), 'Vote dans 18 min');
@@ -143,9 +171,14 @@ void main() {
       'data': [group(1, 'a', 'Poule A', 3), group(2, 'a', 'Poule B', 4), group(3, 'b', 'Poule A', 8)],
     });
 
+    // A draw where competition « a » comes first.
+    final seed = [for (var i = 0; i < 100; i++) i].firstWhere((s) => shuffleBattles(board.open, s).first.first.competitionSlug == 'a');
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [battlesProvider.overrideWith((ref) => Stream.value(Resource(data: board)))],
+        overrides: [
+          battlesProvider.overrideWith((ref) => Stream.value(Resource(data: board))),
+          battleShuffleProvider.overrideWith((ref) => seed),
+        ],
         child: MaterialApp(theme: AppTheme.dark(), home: const Scaffold(body: BattlesView(visible: false))),
       ),
     );
@@ -153,7 +186,7 @@ void main() {
 
     // Competition « a »: one of its two groups, then the other one.
     expect(find.text('Compétition a'), findsOneWidget);
-    expect(find.textContaining('sur 2'), findsOneWidget);
+    expect(find.text('2 poules en vote'), findsOneWidget);
     final firstShown = find.text('Artiste 1-0').evaluate().isNotEmpty ? 1 : 2;
     await tester.tap(find.text('Poule suivante'));
     await tester.pumpAndSettle();

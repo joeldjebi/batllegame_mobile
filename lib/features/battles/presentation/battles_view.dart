@@ -24,14 +24,18 @@ import '../data/battles.dart';
 
 const _shadow = [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(0, 1))];
 
-/// Which battle of a competition is shown (« Poule B · 2 sur 5 »), and the next one.
+/// Which battle of a competition is shown, how many are open (« 5 poules en vote »), and the next one.
 typedef BattleNav = ({int index, int total, VoidCallback? onNext});
 
-/// Battle shown per competition for this session (the tab keeps it when you come back).
+/// Battle shown per competition (the tab keeps it while you browse).
 final battlePicksProvider = StateProvider<Map<String, int>>((ref) => const {});
 
-/// « Battles »: one page per competition whose vote is open, soonest to close first,
-/// with one of its battles picked at random (preferably one you have not voted in yet),
+/// Seed of the random order of competitions and groups: new at each launch and each
+/// pull to refresh, stable in between (pages never move under the finger).
+final battleShuffleProvider = StateProvider<int>((ref) => Random().nextInt(1 << 31));
+
+/// « Battles »: one page per competition whose vote is open, in random order, each on
+/// one of its battles in random order (the ones you have not voted in first), with
 /// « Poule suivante » and the full program; then the battles coming next.
 class BattlesView extends ConsumerStatefulWidget {
   const BattlesView({super.key, required this.visible});
@@ -68,18 +72,18 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
     // No vote open: what comes next, and when.
     if (board.open.isEmpty) return UpcomingView(upcoming: board.upcoming, nothingOpen: true);
 
-    // One page per competition, in the order of the first battle to close.
-    final byCompetition = <String, List<Battle>>{};
-    for (final battle in board.open) {
-      byCompetition.putIfAbsent(battle.competitionSlug, () => []).add(battle);
-    }
-    final competitions = byCompetition.values.toList();
+    final seed = ref.watch(battleShuffleProvider);
+    final competitions = shuffleBattles(board.open, seed);
     final picks = ref.watch(battlePicksProvider);
-    final votes = ref.watch(battleVotesProvider);
 
     return RefreshIndicator(
       color: c.primary,
-      onRefresh: () async => ref.invalidate(battlesProvider),
+      // A new draw: other competitions and groups first.
+      onRefresh: () async {
+        ref.read(battlePicksProvider.notifier).state = const {};
+        ref.read(battleShuffleProvider.notifier).state = Random().nextInt(1 << 31);
+        ref.invalidate(battlesProvider);
+      },
       child: PageView.builder(
         scrollDirection: Axis.vertical,
         itemCount: competitions.length + (board.upcoming.isEmpty ? 0 : 1),
@@ -89,10 +93,7 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
           final battles = competitions[i];
           final slug = battles.first.competitionSlug;
           final picked = battles.indexWhere((b) => b.id == picks[slug]);
-          final index = picked >= 0 ? picked : _pick(battles, votes);
-          if (picked < 0) {
-            WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(battlePicksProvider.notifier).update((m) => {...m, slug: battles[index].id}));
-          }
+          final index = picked >= 0 ? picked : 0;
           final battle = battles[index];
           final nav = (
             index: index,
@@ -110,16 +111,25 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
     );
   }
 
-  /// A battle at random, preferably one the viewer can still vote in: every group
-  /// gets seen in turn, not always the first one.
-  static int _pick(List<Battle> battles, Map<int, int> votes) {
-    final open = [
-      for (final (i, b) in battles.indexed)
-        if (!b.isMine && !b.votedInPhase && b.myVote == null && !votes.containsKey(b.id)) i,
-    ];
-    final pool = open.isEmpty ? [for (var i = 0; i < battles.length; i++) i] : open;
-    return pool[Random().nextInt(pool.length)];
+}
+
+/// The open battles by competition, competitions and battles in a random order drawn
+/// from [seed]; in each competition the battles you can still vote in come first.
+List<List<Battle>> shuffleBattles(List<Battle> open, int seed) {
+  final byCompetition = <String, List<Battle>>{};
+  for (final battle in open) {
+    byCompetition.putIfAbsent(battle.competitionSlug, () => []).add(battle);
   }
+  final random = Random(seed);
+  final slugs = byCompetition.keys.toList()..shuffle(random);
+  return [
+    for (final slug in slugs)
+      () {
+        final battles = [...byCompetition[slug]!]..shuffle(random);
+        bool votable(Battle b) => !b.isMine && !b.votedInPhase && b.myVote == null;
+        return [...battles.where(votable), ...battles.where((b) => !votable(b))];
+      }(),
+  ];
 }
 
 /// Top of a battle: the competition in full, then the group or stage and when the vote closes.
@@ -172,7 +182,7 @@ class _BattleHeader extends StatelessWidget {
               children: [
                 if (nav != null && nav!.total > 1) ...[
                   Text(
-                    '${battle.isGroup ? 'Poule' : 'Battle'} ${nav!.index + 1} sur ${nav!.total}',
+                    '${nav!.total} ${battle.isGroup ? 'poules' : 'battles'} en vote',
                     style: context.text.labelSmall?.copyWith(color: Colors.white60),
                   ),
                   const Spacer(),
