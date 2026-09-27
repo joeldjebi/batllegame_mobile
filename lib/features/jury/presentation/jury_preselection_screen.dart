@@ -10,6 +10,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/offline_banner.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../data/pending_scores.dart';
 import '../data/providers.dart';
@@ -109,7 +110,7 @@ class _JuryPreselectionScreenState extends ConsumerState<JuryPreselectionScreen>
                 Expanded(
                   child: state.entries.isEmpty
                       ? (state.loading
-                          ? const Center(child: CircularProgressIndicator())
+                          ? const SkeletonList(padding: EdgeInsets.symmetric(horizontal: Space.gutter))
                           : EmptyState(
                               icon: _tab == 'notees' ? AppIcons.doneOutline : AppIcons.jury,
                               title: _tab == 'notees' ? 'Aucune prestation notée' : 'Rien à noter ici',

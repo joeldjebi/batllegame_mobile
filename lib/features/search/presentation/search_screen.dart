@@ -10,6 +10,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/grouped_list.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/video_grid.dart';
 import '../../competitions/presentation/discover_screen.dart';
 import '../../feed/data/feed_item.dart';
@@ -334,7 +335,7 @@ class _TopResults extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final results = ref.watch(searchProvider(query));
     final videos = ref.watch(searchVideosProvider(query));
-    if (results.isLoading && videos.isLoading) return const Center(child: CircularProgressIndicator());
+    if (results.isLoading && videos.isLoading) return const SkeletonList(count: 4);
     final data = results.valueOrNull ?? const SearchResults();
     final items = videos.valueOrNull ?? const <FeedItem>[];
     if (data.artists.isEmpty && data.competitions.isEmpty && items.isEmpty) return _NoResult(query: query);
@@ -390,7 +391,7 @@ class _VideosGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => ref
       .watch(searchVideosProvider(query))
       .when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonGrid(count: 9),
         error: (_, _) => const EmptyState(icon: AppIcons.offline, title: 'Recherche indisponible', message: 'Vérifie ta connexion et réessaie.'),
         data: (items) => items.isEmpty ? _NoResult(query: query) : VideoGrid(items: items),
       );
@@ -406,7 +407,7 @@ class _ArtistsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => ref
       .watch(searchProvider(query))
       .when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonList(),
         error: (_, _) => const EmptyState(icon: AppIcons.offline, title: 'Recherche indisponible', message: 'Vérifie ta connexion et réessaie.'),
         data: (results) => results.artists.isEmpty
             ? _NoResult(query: query)
@@ -467,7 +468,7 @@ class _CompetitionsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => ref
       .watch(searchProvider(query))
       .when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonList(),
         error: (_, _) => const EmptyState(icon: AppIcons.offline, title: 'Recherche indisponible', message: 'Vérifie ta connexion et réessaie.'),
         data: (results) => results.competitions.isEmpty
             ? _NoResult(query: query)

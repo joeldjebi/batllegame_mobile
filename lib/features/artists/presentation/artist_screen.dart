@@ -170,7 +170,7 @@ class _Videos extends ConsumerWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(Radii.xl),
             child: videos.when(
-              loading: () => const _GridSkeleton(),
+              loading: () => const SkeletonGrid(shrink: true),
               error: (_, _) => const SizedBox.shrink(),
               data: (items) => items.isEmpty
                   ? Container(
@@ -188,22 +188,6 @@ class _Videos extends ConsumerWidget {
   }
 }
 
-class _GridSkeleton extends StatelessWidget {
-  const _GridSkeleton();
-
-  @override
-  Widget build(BuildContext context) => GridView.count(
-    crossAxisCount: 3,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    mainAxisSpacing: 2,
-    crossAxisSpacing: 2,
-    childAspectRatio: 0.66,
-    padding: const EdgeInsets.all(2),
-    children: [for (var i = 0; i < 6; i++) const Skeleton()],
-  );
-}
-
 class _ArtistSkeleton extends StatelessWidget {
   const _ArtistSkeleton();
 
@@ -217,7 +201,7 @@ class _ArtistSkeleton extends StatelessWidget {
       SizedBox(height: Space.lg),
       Center(child: Skeleton(width: 240, height: 36)),
       SizedBox(height: Space.xl),
-      _GridSkeleton(),
+      SkeletonGrid(shrink: true),
     ],
   );
 }
@@ -233,7 +217,7 @@ class FollowingScreen extends ConsumerWidget {
     body: ref
         .watch(followingProvider)
         .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const SkeletonList(),
           error: (_, _) => const EmptyState(icon: AppIcons.offline, title: 'Liste indisponible', message: 'Vérifie ta connexion et réessaie.'),
           data: (artists) => artists.isEmpty
               ? const EmptyState(icon: AppIcons.profile, title: 'Aucun artiste suivi', message: 'Touche « Suivre » sur la page d\'un artiste pour le retrouver ici.')

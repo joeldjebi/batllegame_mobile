@@ -19,6 +19,7 @@ import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/cached_image.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/hold_to_vote.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/toast.dart';
 import '../data/battles.dart';
 
@@ -58,7 +59,7 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
     if (board == null) {
       return resource?.error != null
           ? EmptyState(icon: AppIcons.offline, title: 'Battles indisponibles', message: resource!.error!.message)
-          : const Center(child: CircularProgressIndicator(color: Colors.white54));
+          : const _BattleSkeleton();
     }
     if (board.isEmpty) {
       return EmptyState(
@@ -732,4 +733,37 @@ class _UpcomingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The shape of a battle page while it loads: the header, then the group grid.
+class _BattleSkeleton extends StatelessWidget {
+  const _BattleSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Chargement des battles',
+    liveRegion: true,
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(Space.lg, MediaQuery.paddingOf(context).top + 60, Space.lg, Space.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Skeleton(width: 230, height: 18),
+          const SizedBox(height: Space.sm),
+          const Skeleton(width: 170, height: 12),
+          const SizedBox(height: Space.lg),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: Space.md,
+              crossAxisSpacing: Space.md,
+              childAspectRatio: 0.62,
+              children: [for (var i = 0; i < 4; i++) const Skeleton(radius: Radii.lg)],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
