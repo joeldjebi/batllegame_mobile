@@ -79,6 +79,7 @@ class ProfileTab extends ConsumerWidget {
               GroupedSection(
                 children: [
                   GroupedTile(icon: AppIcons.trophy, iconColor: c.primary, title: 'Mes compétitions', onTap: () => context.go('/publier')),
+                  GroupedTile(icon: AppIcons.liked, iconColor: const Color(0xFFFF9500), title: 'Artistes suivis', onTap: () => context.push('/artistes-suivis')),
                   if (user.isJudge)
                     GroupedTile(icon: AppIcons.jury, iconColor: const Color(0xFF0A84FF), title: 'Espace jury', onTap: () => context.go('/jury')),
                   GroupedTile(

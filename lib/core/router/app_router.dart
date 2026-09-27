@@ -7,6 +7,7 @@ import '../../features/artist/presentation/edit_profile_screen.dart';
 import '../../features/artist/presentation/journey_screen.dart';
 import '../../features/artist/presentation/my_competitions_screen.dart';
 import '../../features/artist/presentation/registration.dart';
+import '../../features/artists/presentation/artist_screen.dart';
 import '../../features/auth/data/session.dart';
 import '../../features/auth/presentation/change_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -105,6 +106,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/competitions/:slug/paiement', builder: (_, state) => PaymentScreen(slug: state.pathParameters['slug']!)),
       GoRoute(path: '/profil/modifier', builder: (_, _) => const EditProfileScreen()),
       GoRoute(path: '/reglages', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/artistes/:id', builder: (_, state) => ArtistScreen(participantId: int.parse(state.pathParameters['id']!))),
+      GoRoute(path: '/artistes-suivis', builder: (_, _) => const FollowingScreen()),
       GoRoute(path: '/recherche', builder: (_, state) => SearchScreen(initialQuery: state.uri.queryParameters['q'] ?? '')),
       GoRoute(
         path: '/lecture',

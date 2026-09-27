@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -219,9 +220,17 @@ class _Credits extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '@${item.stageName}',
-          style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700, shadows: _shadow),
+        Semantics(
+          button: true,
+          label: 'Profil de ${item.stageName}',
+          excludeSemantics: true,
+          child: GestureDetector(
+            onTap: () => context.push('/artistes/${item.participantId}'),
+            child: Text(
+              '@${item.stageName}',
+              style: text.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700, shadows: _shadow),
+            ),
+          ),
         ),
         const SizedBox(height: Space.xs),
         Text(
@@ -281,7 +290,7 @@ class _Actions extends StatelessWidget {
           button: true,
           label: 'Profil de ${item.stageName}',
           child: GestureDetector(
-            onTap: onCompetition,
+            onTap: () => context.push('/artistes/${item.participantId}'),
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),

@@ -8,9 +8,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/avatar.dart';
-import '../../../core/widgets/cached_image.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/grouped_list.dart';
+import '../../../core/widgets/video_grid.dart';
 import '../../competitions/presentation/discover_screen.dart';
 import '../../feed/data/feed_item.dart';
 import '../data/search.dart';
@@ -71,6 +71,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
     unawaited(ref.read(searchHistoryProvider.notifier).add(query));
   }
 
+  /// An artist found: their page (remembered in the recent searches).
+  void _openArtist(SearchArtist artist) {
+    unawaited(ref.read(searchHistoryProvider.notifier).add(artist.stageName));
+    context.push('/artistes/${artist.participantId}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -125,9 +131,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                           child: TabBarView(
                             controller: _tabsController,
                             children: [
-                              _TopResults(query: _query, onArtist: (a) => _search(a.stageName, tab: 1), onMore: _tabsController.animateTo),
+                              _TopResults(query: _query, onArtist: _openArtist, onMore: _tabsController.animateTo),
                               _VideosGrid(query: _query),
-                              _ArtistsList(query: _query, onArtist: (a) => _search(a.stageName, tab: 1)),
+                              _ArtistsList(query: _query, onArtist: _openArtist),
                               _CompetitionsList(query: _query),
                             ],
                           ),
@@ -263,7 +269,7 @@ class _Suggestions extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               itemCount: suggestions.artists.length,
               separatorBuilder: (_, _) => const SizedBox(width: Space.lg),
-              itemBuilder: (context, i) => _ArtistBubble(artist: suggestions.artists[i], onTap: () => onSearch(suggestions.artists[i].stageName, tab: 1)),
+              itemBuilder: (context, i) => _ArtistBubble(artist: suggestions.artists[i], onTap: () => context.push('/artistes/${suggestions.artists[i].participantId}')),
             ),
           ),
           const SizedBox(height: Space.xl),
@@ -349,7 +355,7 @@ class _TopResults extends ConsumerWidget {
             child: GroupedSection(children: [for (final competition in data.competitions.take(3)) CompetitionCard(competition: competition)]),
           ),
         ],
-        if (items.isNotEmpty) ...[_SectionTitle('Vidéos', onMore: () => onMore(1)), _Grid(items: items.take(6).toList(), shrink: true)],
+        if (items.isNotEmpty) ...[_SectionTitle('Vidéos', onMore: () => onMore(1)), VideoGrid(items: items.take(6).toList(), shrink: true)],
       ],
     );
   }
@@ -386,66 +392,8 @@ class _VideosGrid extends ConsumerWidget {
       .when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const EmptyState(icon: AppIcons.offline, title: 'Recherche indisponible', message: 'Vérifie ta connexion et réessaie.'),
-        data: (items) => items.isEmpty ? _NoResult(query: query) : _Grid(items: items),
+        data: (items) => items.isEmpty ? _NoResult(query: query) : VideoGrid(items: items),
       );
-}
-
-/// Three columns of vertical posters, the artist on each; a tap plays the video.
-class _Grid extends StatelessWidget {
-  const _Grid({required this.items, this.shrink = false});
-
-  final List<FeedItem> items;
-  final bool shrink;
-
-  @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: shrink,
-    physics: shrink ? const NeverScrollableScrollPhysics() : null,
-    padding: const EdgeInsets.all(2),
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2, childAspectRatio: 0.66),
-    itemCount: items.length,
-    itemBuilder: (context, i) {
-      final item = items[i];
-      return GestureDetector(
-        onTap: () => context.push('/lecture', extra: (key: item.key, media: item.media, title: item.stageName)),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(
-              color: const Color(0xFF1E1E2A),
-              child: item.media.posterUrl == null ? null : CachedImage(cacheKey: '${item.key}-poster', url: item.media.posterUrl),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.45),
-                padding: const EdgeInsets.fromLTRB(Space.sm, Space.xs, Space.sm, Space.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.stageName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.labelMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      item.competitionName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.labelSmall?.copyWith(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
 }
 
 class _ArtistsList extends ConsumerWidget {
