@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_icons.dart';
@@ -17,16 +18,19 @@ const _disciplines = ['rap', 'chant', 'freestyle', 'slam', 'beatbox', 'autre'];
 const _pages = [
   (
     icon: AppIcons.battle,
+    animation: 'assets/lottie/onboarding_battles.json',
     title: 'Des battles, votées par le public',
     text: 'Dans « Battles », les poules et les duels en cours. Regarde les prestations et choisis ton artiste.',
   ),
   (
     icon: AppIcons.vote,
+    animation: 'assets/lottie/onboarding_vote.json',
     title: 'Ton vote compte',
     text: 'Maintiens le bouton « Voter » pour voter : un vote par phase, et le jury note de son côté. Partage pour soutenir tes favoris.',
   ),
   (
     icon: AppIcons.microphone,
+    animation: 'assets/lottie/onboarding_stage.json',
     title: 'À toi la scène',
     text: 'Inscris-toi à une compétition, envoie ta prestation depuis l\'app et suis ton parcours jusqu\'à la finale.',
   ),
@@ -92,7 +96,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   controller: _pager,
                   onPageChanged: (i) => setState(() => _page = i),
                   children: [
-                    for (final page in _pages) _Intro(icon: page.icon, title: page.title, text: page.text),
+                    for (final page in _pages) _Intro(icon: page.icon, animation: page.animation, title: page.title, text: page.text),
                     const _Preferences(),
                   ],
                 ),
@@ -142,9 +146,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _Intro extends StatelessWidget {
-  const _Intro({required this.icon, required this.title, required this.text});
+  const _Intro({required this.icon, required this.animation, required this.title, required this.text});
 
   final IconData icon;
+
+  /// Lottie file (tool/onboarding_lottie.py); [icon] if it can't be read.
+  final String animation;
   final String title;
   final String text;
 
@@ -160,11 +167,21 @@ class _Intro extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 132,
-                height: 132,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), shape: BoxShape.circle),
-                child: Icon(icon, size: 60, color: Colors.white),
+              ExcludeSemantics(
+                child: Lottie.asset(
+                  animation,
+                  width: 240,
+                  height: 240,
+                  frameRate: FrameRate.max,
+                  // Reduced motion: a still frame where everything is shown.
+                  controller: context.reduceMotion ? const AlwaysStoppedAnimation(0.55) : null,
+                  errorBuilder: (context, _, _) => Container(
+                    width: 132,
+                    height: 132,
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), shape: BoxShape.circle),
+                    child: Icon(icon, size: 60, color: Colors.white),
+                  ),
+                ),
               ),
               const SizedBox(height: Space.xxl),
               Text(
