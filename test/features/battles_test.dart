@@ -129,40 +129,42 @@ void main() {
     expect(votes, 0);
   });
 
-  testWidgets('a swipe on a group grid moves to the next battle', (tester) async {
-    Map<String, dynamic> group(int id, String title, int artists) => {
+  testWidgets('one page per competition: a swipe moves to the next, « Poule suivante » to another group', (tester) async {
+    Map<String, dynamic> group(int id, String slug, String title, int artists) => {
       'id': id,
       'is_group': true,
       'title': title,
-      'competition': {'id': 1, 'slug': 'abidjan', 'name': 'Abidjan Rap'},
+      'competition': {'id': id, 'slug': slug, 'name': 'Compétition $slug'},
       'artists': [
         for (var i = 0; i < artists; i++) {'participant_id': id * 10 + i, 'stage_name': 'Artiste $id-$i', 'media': null},
       ],
     };
     final board = BattleBoard.fromJson({
-      'data': [group(1, 'Poule A', 3), group(2, 'Poule B', 4), group(3, 'Poule C', 8)],
+      'data': [group(1, 'a', 'Poule A', 3), group(2, 'a', 'Poule B', 4), group(3, 'b', 'Poule A', 8)],
     });
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [battlesProvider.overrideWith((ref) => Stream.value(Resource(data: board)))],
-        child: MaterialApp(
-          theme: AppTheme.dark(),
-          home: const Scaffold(body: BattlesView(visible: false)),
-        ),
+        child: MaterialApp(theme: AppTheme.dark(), home: const Scaffold(body: BattlesView(visible: false))),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Artiste 1-0'), findsOneWidget);
 
-    // From the middle of the grid, not the header.
-    await tester.fling(find.text('Artiste 1-0'), const Offset(0, -500), 1500);
+    // Competition « a »: one of its two groups, then the other one.
+    expect(find.text('Compétition a'), findsOneWidget);
+    expect(find.textContaining('sur 2'), findsOneWidget);
+    final firstShown = find.text('Artiste 1-0').evaluate().isNotEmpty ? 1 : 2;
+    await tester.tap(find.text('Poule suivante'));
     await tester.pumpAndSettle();
-    expect(find.text('Artiste 2-0'), findsOneWidget);
+    expect(find.text('Artiste ${firstShown == 1 ? 2 : 1}-0'), findsOneWidget);
+    expect(find.text('Programme complet'), findsOneWidget);
 
-    // A big group fits on the page too: its last artist is visible.
-    await tester.fling(find.text('Artiste 2-0'), const Offset(0, -500), 1500);
+    // A swipe from the middle of the grid moves to the next competition; a big group fits on the page.
+    await tester.fling(find.textContaining('Artiste ').first, const Offset(0, -500), 1500);
     await tester.pumpAndSettle();
+    expect(find.text('Compétition b'), findsOneWidget);
+    expect(find.text('Poule suivante'), findsNothing);
     expect(find.text('Artiste 3-7').hitTestable(), findsOneWidget);
   });
 }

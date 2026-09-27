@@ -92,7 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/jury/:slug/matchs/:id',
         builder: (_, state) => JuryMatchScreen(slug: state.pathParameters['slug']!, id: int.parse(state.pathParameters['id']!)),
       ),
-      GoRoute(path: '/competitions/:slug', builder: (_, state) => CompetitionScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(path: '/competitions/:slug', builder: (_, state) => CompetitionScreen(slug: state.pathParameters['slug']!, initialTab: state.uri.queryParameters['onglet'] == 'phases' ? 2 : 0)),
       GoRoute(
         path: '/competitions/:slug/prestations',
         builder: (_, state) => CompetitionFeedScreen(slug: state.pathParameters['slug']!, title: state.uri.queryParameters['titre']),

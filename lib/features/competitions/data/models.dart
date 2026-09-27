@@ -142,13 +142,24 @@ class CompetitionDetail extends CompetitionSummary {
 }
 
 class SlotSummary {
-  const SlotSummary({this.participantId, required this.stageName, this.avatarUrl, this.finalScore, this.rank, this.isForfeit = false});
+  const SlotSummary({
+    this.participantId,
+    required this.stageName,
+    this.avatarUrl,
+    this.finalScore,
+    this.juryScore,
+    this.publicScore,
+    this.rank,
+    this.isForfeit = false,
+  });
 
   factory SlotSummary.fromJson(Map<String, dynamic> json) => SlotSummary(
         participantId: json['participant_id'] as int?,
         stageName: (json['stage_name'] as String?) ?? 'À déterminer',
         avatarUrl: json['avatar_url'] as String?,
         finalScore: (json['final_score'] as num?)?.toDouble(),
+        juryScore: (json['jury_score'] as num?)?.toDouble(),
+        publicScore: (json['public_score'] as num?)?.toDouble(),
         rank: json['rank'] as int?,
         isForfeit: json['is_forfeit'] == true,
       );
@@ -157,6 +168,10 @@ class SlotSummary {
   final String stageName;
   final String? avatarUrl;
   final double? finalScore;
+
+  /// Jury note and public share: only once the organizer published the stage results.
+  final double? juryScore;
+  final double? publicScore;
   final int? rank;
   final bool isForfeit;
 }
@@ -175,6 +190,7 @@ class MatchSummary {
     this.stage,
     this.votingClosesAt,
     this.winnerId,
+    this.resultsPublished = false,
   });
 
   factory MatchSummary.fromJson(Map<String, dynamic> json) => MatchSummary(
@@ -188,6 +204,7 @@ class MatchSummary {
         stage: json['stage'] as String?,
         votingClosesAt: parseDate(json['voting_closes_at']),
         winnerId: json['winner_id'] as int?,
+        resultsPublished: json['results_published'] == true,
         slots: [for (final s in _list(json['slots'])) SlotSummary.fromJson(s)],
       );
 
@@ -201,6 +218,9 @@ class MatchSummary {
   final String? stage;
   final DateTime? votingClosesAt;
   final int? winnerId;
+
+  /// The organizer published the stage results (jury notes, scores, ranking).
+  final bool resultsPublished;
   final List<SlotSummary> slots;
 }
 

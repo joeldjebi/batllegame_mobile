@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,8 +24,15 @@ import '../data/battles.dart';
 
 const _shadow = [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(0, 1))];
 
-/// « Battles »: the matches whose vote is open, one per page (duels face to face,
-/// groups as a grid), soonest to close first; then the battles coming next.
+/// Which battle of a competition is shown (« Poule B · 2 sur 5 »), and the next one.
+typedef BattleNav = ({int index, int total, VoidCallback? onNext});
+
+/// Battle shown per competition for this session (the tab keeps it when you come back).
+final battlePicksProvider = StateProvider<Map<String, int>>((ref) => const {});
+
+/// « Battles »: one page per competition whose vote is open, soonest to close first,
+/// with one of its battles picked at random (preferably one you have not voted in yet),
+/// « Poule suivante » and the full program; then the battles coming next.
 class BattlesView extends ConsumerStatefulWidget {
   const BattlesView({super.key, required this.visible});
 
@@ -60,32 +68,66 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
     // No vote open: what comes next, and when.
     if (board.open.isEmpty) return UpcomingView(upcoming: board.upcoming, nothingOpen: true);
 
-    final battles = board.open;
+    // One page per competition, in the order of the first battle to close.
+    final byCompetition = <String, List<Battle>>{};
+    for (final battle in board.open) {
+      byCompetition.putIfAbsent(battle.competitionSlug, () => []).add(battle);
+    }
+    final competitions = byCompetition.values.toList();
+    final picks = ref.watch(battlePicksProvider);
+    final votes = ref.watch(battleVotesProvider);
+
     return RefreshIndicator(
       color: c.primary,
       onRefresh: () async => ref.invalidate(battlesProvider),
       child: PageView.builder(
         scrollDirection: Axis.vertical,
-        itemCount: battles.length + (board.upcoming.isEmpty ? 0 : 1),
+        itemCount: competitions.length + (board.upcoming.isEmpty ? 0 : 1),
         onPageChanged: (i) => setState(() => _index = i),
         itemBuilder: (context, i) {
-          if (i == battles.length) return UpcomingView(upcoming: board.upcoming);
-          final battle = battles[i];
+          if (i == competitions.length) return UpcomingView(upcoming: board.upcoming);
+          final battles = competitions[i];
+          final slug = battles.first.competitionSlug;
+          final picked = battles.indexWhere((b) => b.id == picks[slug]);
+          final index = picked >= 0 ? picked : _pick(battles, votes);
+          if (picked < 0) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(battlePicksProvider.notifier).update((m) => {...m, slug: battles[index].id}));
+          }
+          final battle = battles[index];
+          final nav = (
+            index: index,
+            total: battles.length,
+            onNext: battles.length < 2
+                ? null
+                : () => ref.read(battlePicksProvider.notifier).update((m) => {...m, slug: battles[(index + 1) % battles.length].id}),
+          );
           final active = widget.visible && i == _index;
           return battle.isDuel
-              ? DuelTile(key: ValueKey('duel-${battle.id}'), battle: battle, active: active)
-              : GroupTile(key: ValueKey('group-${battle.id}'), battle: battle);
+              ? DuelTile(key: ValueKey('duel-${battle.id}'), battle: battle, active: active, nav: nav)
+              : GroupTile(key: ValueKey('group-${battle.id}'), battle: battle, nav: nav);
         },
       ),
     );
+  }
+
+  /// A battle at random, preferably one the viewer can still vote in: every group
+  /// gets seen in turn, not always the first one.
+  static int _pick(List<Battle> battles, Map<int, int> votes) {
+    final open = [
+      for (final (i, b) in battles.indexed)
+        if (!b.isMine && !b.votedInPhase && b.myVote == null && !votes.containsKey(b.id)) i,
+    ];
+    final pool = open.isEmpty ? [for (var i = 0; i < battles.length; i++) i] : open;
+    return pool[Random().nextInt(pool.length)];
   }
 }
 
 /// Top of a battle: the competition in full, then the group or stage and when the vote closes.
 class _BattleHeader extends StatelessWidget {
-  const _BattleHeader({required this.battle});
+  const _BattleHeader({required this.battle, this.nav});
 
   final Battle battle;
+  final BattleNav? nav;
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +167,57 @@ class _BattleHeader extends StatelessWidget {
                 ],
               ],
             ),
+            const SizedBox(height: Space.sm),
+            Row(
+              children: [
+                if (nav != null && nav!.total > 1) ...[
+                  Text(
+                    '${battle.isGroup ? 'Poule' : 'Battle'} ${nav!.index + 1} sur ${nav!.total}',
+                    style: context.text.labelSmall?.copyWith(color: Colors.white60),
+                  ),
+                  const Spacer(),
+                  _HeaderButton(label: battle.isGroup ? 'Poule suivante' : 'Battle suivante', onTap: nav!.onNext),
+                  const SizedBox(width: Space.sm),
+                ] else
+                  const Spacer(),
+                _HeaderButton(
+                  label: 'Programme complet',
+                  filled: true,
+                  onTap: () => context.push('/competitions/${battle.competitionSlug}?onglet=phases'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({required this.label, required this.onTap, this.filled = false});
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap == null
+        ? null
+        : () {
+            HapticFeedback.selectionClick();
+            onTap!();
+          },
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: 6),
+      decoration: BoxDecoration(
+        color: filled ? Colors.white : Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(Radii.pill),
+      ),
+      child: Text(label, style: context.text.labelMedium?.copyWith(color: filled ? Colors.black : Colors.white, fontWeight: FontWeight.w700)),
+    ),
+  );
 }
 
 /// Casts a vote from a battle: account and verified phone first, room code battles on
@@ -158,10 +246,11 @@ Future<void> voteIn(BuildContext context, WidgetRef ref, Battle battle, BattleAr
 /// Two artists face to face: two halves, « VS » between them; the touched half plays
 /// with sound, the other waits on its poster.
 class DuelTile extends ConsumerStatefulWidget {
-  const DuelTile({super.key, required this.battle, required this.active});
+  const DuelTile({super.key, required this.battle, required this.active, this.nav});
 
   final Battle battle;
   final bool active;
+  final BattleNav? nav;
 
   @override
   ConsumerState<DuelTile> createState() => _DuelTileState();
@@ -274,7 +363,7 @@ class _DuelTileState extends ConsumerState<DuelTile> {
               ),
             ),
           ),
-          _BattleHeader(battle: battle),
+          _BattleHeader(battle: battle, nav: widget.nav),
         ],
       ),
     );
@@ -374,9 +463,10 @@ class _Half extends ConsumerWidget {
 
 /// A group: every artist of the pool, one vote for the whole phase.
 class GroupTile extends ConsumerWidget {
-  const GroupTile({super.key, required this.battle});
+  const GroupTile({super.key, required this.battle, this.nav});
 
   final Battle battle;
+  final BattleNav? nav;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -388,7 +478,7 @@ class GroupTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BattleHeader(battle: battle),
+          _BattleHeader(battle: battle, nav: nav),
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.lg, Space.sm),
             child: Text(
@@ -414,7 +504,7 @@ class GroupTile extends ConsumerWidget {
                     crossAxisCount: columns,
                     mainAxisSpacing: Space.md,
                     crossAxisSpacing: Space.md,
-                    childAspectRatio: height > 0 ? (width / height).clamp(0.45, 1.6) : 0.62,
+                    childAspectRatio: height > 0 ? (width / height).clamp(0.45, 4.0) : 0.62,
                   ),
                   itemCount: count,
                   itemBuilder: (context, i) => _groupCell(context, ref, battle, battle.artists[i], voted, canVote),

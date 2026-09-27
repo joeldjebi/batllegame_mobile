@@ -20,9 +20,12 @@ import '../data/providers.dart';
 
 /// A competition: header, its performances, and four tabs.
 class CompetitionScreen extends ConsumerWidget {
-  const CompetitionScreen({super.key, required this.slug});
+  const CompetitionScreen({super.key, required this.slug, this.initialTab = 0});
 
   final String slug;
+
+  /// Tab shown first (2: the phases, the full program with results, from the Battles tab).
+  final int initialTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,6 +38,7 @@ class CompetitionScreen extends ConsumerWidget {
           channel: 'competition.${competition.id}',
           child: DefaultTabController(
             length: 4,
+            initialIndex: initialTab.clamp(0, 3),
             child: NestedScrollView(
               headerSliverBuilder: (context, _) => [
                 SliverAppBar(pinned: true, title: Text(competition.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -434,6 +438,34 @@ class MatchCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                  if (match.resultsPublished && match.slots.any((s) => s.juryScore != null || s.publicScore != null))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Space.sm),
+                      child: Column(
+                        children: [
+                          for (final slot in match.slots.where((s) => s.participantId != null))
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(slot.stageName, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.labelSmall?.copyWith(color: c.textMuted)),
+                                  ),
+                                  Text(
+                                    'Jury ${_score(slot.juryScore)} · Public ${_score(slot.publicScore)}',
+                                    style: context.text.labelSmall?.copyWith(color: c.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
+                  else if (match.status == 'cloture' && !match.resultsPublished)
+                    Text(
+                      'Notes du jury et scores publiés par l\'organisateur à la fin de l\'étape.',
+                      style: context.text.bodySmall?.copyWith(color: c.textMuted),
+                    ),
                   if (match.votingOpen && match.votingClosesAt != null)
                     Text(
                       'Vote ouvert · ferme ${Labels.remaining(match.votingClosesAt!)}',
@@ -448,6 +480,8 @@ class MatchCard extends StatelessWidget {
     );
   }
 }
+
+String _score(double? value) => value == null ? '–' : value.toStringAsFixed(1).replaceAll('.', ',');
 
 class _Regulations extends StatelessWidget {
   const _Regulations({required this.competition});
