@@ -115,6 +115,36 @@ final _board = BattleBoard.fromJson({
 void main() {
   setUpAll(() => initializeDateFormatting('fr'));
 
+  // Dark appearance: the same contrast rules.
+  testWidgets(
+    'Découvrir rows · dark',
+    (tester) => checkGuidelines(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          backgroundColor: groupedBackground(context),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: const [
+              GroupedSection(children: [CompetitionCard(competition: _competition)]),
+            ],
+          ),
+        ),
+      ),
+      theme: AppTheme.dark(),
+    ),
+  );
+
+  testWidgets(
+    'artist page · dark',
+    (tester) => checkGuidelines(
+      tester,
+      const ArtistScreen(participantId: 7),
+      theme: AppTheme.dark(),
+      overrides: [artistProvider.overrideWith((ref, id) async => _artist), artistVideosProvider.overrideWith((ref, id) async => const [])],
+    ),
+  );
+
   for (final bigText in [false, true]) {
     final mode = bigText ? 'with the largest text' : 'guidelines';
 

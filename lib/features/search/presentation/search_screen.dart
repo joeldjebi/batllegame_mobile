@@ -31,7 +31,9 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerProviderStateMixin {
   late final _field = TextEditingController(text: widget.initialQuery);
-  late final _tabsController = TabController(length: _tabs.length, vsync: this);
+  // Created in initState, not lazily: disposing a never-shown controller would create it
+  // while the screen is being torn down (a ticker cannot be looked up then).
+  late final TabController _tabsController;
   final _focus = FocusNode();
   Timer? _debounce;
   late String _query = widget.initialQuery.trim();
@@ -39,6 +41,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    _tabsController = TabController(length: _tabs.length, vsync: this);
     if (_query.isEmpty) WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
   }
 
