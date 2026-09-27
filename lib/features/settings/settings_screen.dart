@@ -37,9 +37,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final c = context.colors;
     final mode = ref.watch(prefetchModeProvider);
     const options = [
-      (mode: PrefetchMode.wifi, title: 'En Wi-Fi seulement', subtitle: 'Recommandé : les vidéos suivantes se préparent sans consommer ton forfait.'),
+      (mode: PrefetchMode.wifi, title: 'En Wi-Fi seulement', subtitle: 'Recommandé : les vidéos suivantes se préparent en Wi-Fi ; celles que tu regardes restent sur le téléphone pour les revoir sans recharger.'),
       (mode: PrefetchMode.always, title: 'Toujours', subtitle: 'Défilement le plus fluide, consomme des données mobiles.'),
-      (mode: PrefetchMode.never, title: 'Jamais', subtitle: 'Économie maximale : chaque vidéo se charge au moment de la regarder.'),
+      (mode: PrefetchMode.never, title: 'Jamais', subtitle: 'Économie maximale : rien n\'est gardé, chaque vidéo se recharge à chaque lecture.'),
     ];
 
     return Scaffold(

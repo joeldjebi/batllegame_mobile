@@ -8,8 +8,9 @@ import '../../../core/media/media_cache.dart';
 import 'feed_item.dart';
 
 /// Players of the feed: at most a handful alive (current, previous, next ones),
-/// created from the disk copy when there is one, else streamed. Next videos are
-/// saved to disk on Wi-Fi so they start instantly and play offline later.
+/// created from the disk copy when there is one, else streamed. The video watched
+/// is saved to disk whatever the network (watching it again never reloads it),
+/// the next ones only on Wi-Fi (or « always »); nothing with the « never » setting.
 class VideoPool extends ChangeNotifier {
   VideoPool(this._cache, {Connectivity? connectivity, this.prefetch = _wifi}) : _connectivity = connectivity ?? Connectivity();
 
@@ -22,6 +23,9 @@ class VideoPool extends ChangeNotifier {
   final Connectivity _connectivity;
   final Map<String, VideoPlayerController> _players = {};
   final Map<String, Future<VideoPlayerController?>> _creating = {};
+
+  /// Disk key and URL of each item created, to save the one being watched.
+  final Map<String, ({String key, String url})> _sources = {};
   bool _muted = false;
 
   /// The item that should play: a player ready later starts at once.
@@ -55,6 +59,7 @@ class VideoPool extends ChangeNotifier {
 
   Future<VideoPlayerController?> _create(FeedItem item, String url) async {
     final key = mediaFileKey(item.key, url);
+    _sources[item.key] = (key: key, url: url);
     final file = await _cache.file(key);
     final player = file != null ? VideoPlayerController.file(file) : VideoPlayerController.networkUrl(Uri.parse(url));
     try {
@@ -74,7 +79,7 @@ class VideoPool extends ChangeNotifier {
     notifyListeners();
 
     final mode = prefetch();
-    if (file == null && mode != 'never' && (mode == 'always' || await _onWifi())) _cache.prefetch(key, url);
+    if (file == null && mode != 'never' && (item.key == _current || mode == 'always' || await _onWifi())) _cache.prefetch(key, url);
     return player;
   }
 
@@ -86,6 +91,7 @@ class VideoPool extends ChangeNotifier {
   /// Only [key] plays; the others wait at their start.
   void play(String? key) {
     _current = key;
+    _keepWatched(key);
     for (final entry in _players.entries) {
       if (entry.key == key) {
         if (!entry.value.value.isPlaying) unawaited(entry.value.play());
@@ -93,6 +99,13 @@ class VideoPool extends ChangeNotifier {
         unawaited(entry.value.pause().then((_) => entry.value.seekTo(Duration.zero)));
       }
     }
+  }
+
+  /// The video being watched stays on the phone (one download, in the background).
+  void _keepWatched(String? key) {
+    final source = key == null ? null : _sources[key];
+    if (source == null || prefetch() == 'never') return;
+    _cache.prefetch(source.key, source.url);
   }
 
   void pauseAll() {

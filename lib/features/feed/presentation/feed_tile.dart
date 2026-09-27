@@ -72,6 +72,8 @@ class _FeedTileState extends State<FeedTile> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final item = widget.item;
     final c = context.colors;
+    // Full screen (no tab bar below): keep clear of the iPhone home indicator.
+    final inset = MediaQuery.paddingOf(context).bottom;
 
     return ListenableBuilder(
       listenable: widget.pool,
@@ -158,35 +160,37 @@ class _FeedTileState extends State<FeedTile> with SingleTickerProviderStateMixin
                   ),
                 ),
                 // Bottom veil for the credits (solid, no gradient).
-                Positioned(left: 0, right: 0, bottom: 0, height: 170, child: ColoredBox(color: Colors.black.withValues(alpha: 0.28))),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 170 + inset,
+                  child: ColoredBox(color: Colors.black.withValues(alpha: 0.28)),
+                ),
                 Positioned(
                   left: Space.lg,
                   right: 88,
-                  bottom: Space.lg,
+                  bottom: Space.lg + inset,
                   child: _Credits(item: item, onCompetition: widget.onCompetition),
                 ),
                 Positioned(
                   right: Space.sm,
-                  bottom: Space.lg,
-                  child: _Actions(
-                    item: item,
-                    onLike: widget.onLike,
-                    onShare: widget.onShare,
-                    onVote: widget.onVote,
-                    onCompetition: widget.onCompetition,
-                  ),
+                  bottom: Space.lg + inset,
+                  child: _Actions(item: item, onLike: widget.onLike, onShare: widget.onShare, onVote: widget.onVote, onCompetition: widget.onCompetition),
                 ),
+                // Duration bar, above the iPhone home indicator when the feed is full screen
+                // (a competition's performances); a touch moves in the video.
                 if (ready)
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 0,
+                    bottom: inset,
                     child: SizedBox(
-                      height: 2,
+                      height: 14,
                       child: VideoProgressIndicator(
                         player,
-                        allowScrubbing: false,
-                        padding: EdgeInsets.zero,
+                        allowScrubbing: true,
+                        padding: const EdgeInsets.only(top: 11),
                         colors: VideoProgressColors(playedColor: c.primary, backgroundColor: Colors.white24, bufferedColor: Colors.white38),
                       ),
                     ),
