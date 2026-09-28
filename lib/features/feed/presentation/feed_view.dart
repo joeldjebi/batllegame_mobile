@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
+import '../../../core/router/route_coverage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/tokens.dart';
@@ -38,7 +39,7 @@ class FeedView extends ConsumerStatefulWidget {
   ConsumerState<FeedView> createState() => _FeedViewState();
 }
 
-class _FeedViewState extends ConsumerState<FeedView> {
+class _FeedViewState extends ConsumerState<FeedView> with RouteCoverage {
   late final VideoPool _pool = VideoPool(
     ref.read(mediaCacheProvider),
     prefetch: () => ref.read(prefetchModeProvider).name,
@@ -49,7 +50,11 @@ class _FeedViewState extends ConsumerState<FeedView> {
   int _index = 0;
   bool _foreground = true;
 
-  bool get _playing => widget.visible && _foreground && ModalRoute.of(context)?.isCurrent != false;
+  bool get _playing => widget.visible && _foreground && !routeCovered && ModalRoute.of(context)?.isCurrent != false;
+
+  // An artist, the search, a competition… opened over the feed, from any button.
+  @override
+  void onRouteCoverageChanged() => _sync();
 
   @override
   void initState() {

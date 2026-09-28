@@ -9,8 +9,10 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/media/video_source.dart';
 import '../../../core/providers.dart';
+import '../../../core/router/route_coverage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/motion.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/labels.dart';
 import '../../../core/widgets/app_button.dart';
@@ -48,8 +50,19 @@ class BattlesView extends ConsumerStatefulWidget {
   ConsumerState<BattlesView> createState() => _BattlesViewState();
 }
 
-class _BattlesViewState extends ConsumerState<BattlesView> {
+class _BattlesViewState extends ConsumerState<BattlesView> with RouteCoverage {
+  final _pages = PageController();
   int _index = 0;
+
+  // A page opened over the battles (a competition, an artist…): the duel stops.
+  @override
+  void onRouteCoverageChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,11 +100,17 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
         ref.invalidate(battlesProvider);
       },
       child: PageView.builder(
+        controller: _pages,
         scrollDirection: Axis.vertical,
         itemCount: competitions.length + (board.upcoming.isEmpty ? 0 : 1),
         onPageChanged: (i) => setState(() => _index = i),
         itemBuilder: (context, i) {
-          if (i == competitions.length) return UpcomingView(upcoming: board.upcoming);
+          if (i == competitions.length) {
+            return UpcomingView(
+              upcoming: board.upcoming,
+              onBack: () => _pages.previousPage(duration: context.motion(Motion.base), curve: Curves.easeOutCubic),
+            );
+          }
           final battles = competitions[i];
           final slug = battles.first.competitionSlug;
           final picked = battles.indexWhere((b) => b.id == picks[slug]);
@@ -104,7 +123,7 @@ class _BattlesViewState extends ConsumerState<BattlesView> {
                 ? null
                 : () => ref.read(battlePicksProvider.notifier).update((m) => {...m, slug: battles[(index + 1) % battles.length].id}),
           );
-          final active = widget.visible && i == _index;
+          final active = widget.visible && !routeCovered && i == _index;
           return battle.isDuel
               ? DuelTile(key: ValueKey('duel-${battle.id}'), battle: battle, active: active, nav: nav)
               : GroupTile(key: ValueKey('group-${battle.id}'), battle: battle, nav: nav);
@@ -616,10 +635,13 @@ class GroupTile extends ConsumerWidget {
 /// The battles whose vote opens later, soonest first. Ticks every 30 s; once an
 /// opening time is past, reloads so the battle moves to the votes.
 class UpcomingView extends ConsumerStatefulWidget {
-  const UpcomingView({super.key, required this.upcoming, this.nothingOpen = false});
+  const UpcomingView({super.key, required this.upcoming, this.nothingOpen = false, this.onBack});
 
   final List<UpcomingBattle> upcoming;
   final bool nothingOpen;
+
+  /// After the open battles: a swipe down from the top goes back to them.
+  final VoidCallback? onBack;
 
   @override
   ConsumerState<UpcomingView> createState() => _UpcomingViewState();
@@ -627,6 +649,7 @@ class UpcomingView extends ConsumerStatefulWidget {
 
 class _UpcomingViewState extends ConsumerState<UpcomingView> {
   Timer? _tick;
+  bool _leaving = false;
 
   @override
   void initState() {
@@ -647,26 +670,37 @@ class _UpcomingViewState extends ConsumerState<UpcomingView> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final list = ListView(
+      // Clamped: a swipe down at the top is an overscroll, the way back to the battles.
+      physics: widget.onBack == null ? const AlwaysScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(Space.gutter, MediaQuery.paddingOf(context).top + 60, Space.gutter, Space.xxl),
+      children: [
+        if (widget.nothingOpen) ...[
+          Text('Aucun vote ouvert en ce moment', style: context.text.titleMedium?.copyWith(color: c.text)),
+          const SizedBox(height: Space.xs),
+          Text('Voici les prochaines battles et l\'heure d\'ouverture de leur vote.', style: context.text.bodySmall?.copyWith(color: c.textMuted)),
+        ] else
+          Text('À venir', style: context.text.titleMedium?.copyWith(color: c.text)),
+        const SizedBox(height: Space.lg),
+        for (final battle in widget.upcoming) ...[_UpcomingCard(battle: battle), const SizedBox(height: Space.md)],
+      ],
+    );
+
     return ColoredBox(
       color: c.background,
-      child: RefreshIndicator(
-        color: c.primary,
-        onRefresh: () async => ref.invalidate(battlesProvider),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(Space.gutter, MediaQuery.paddingOf(context).top + 60, Space.gutter, Space.xxl),
-          children: [
-            if (widget.nothingOpen) ...[
-              Text('Aucun vote ouvert en ce moment', style: context.text.titleMedium?.copyWith(color: c.text)),
-              const SizedBox(height: Space.xs),
-              Text('Voici les prochaines battles et l\'heure d\'ouverture de leur vote.', style: context.text.bodySmall?.copyWith(color: c.textMuted)),
-            ] else
-              Text('À venir', style: context.text.titleMedium?.copyWith(color: c.text)),
-            const SizedBox(height: Space.lg),
-            for (final battle in widget.upcoming) ...[_UpcomingCard(battle: battle), const SizedBox(height: Space.md)],
-          ],
-        ),
-      ),
+      child: widget.onBack == null
+          ? RefreshIndicator(color: c.primary, onRefresh: () async => ref.invalidate(battlesProvider), child: list)
+          : NotificationListener<OverscrollNotification>(
+              onNotification: (n) {
+                if (n.overscroll < 0 && n.dragDetails != null && n.metrics.pixels <= n.metrics.minScrollExtent && !_leaving) {
+                  _leaving = true;
+                  widget.onBack!();
+                  Future<void>.delayed(const Duration(milliseconds: 600), () => _leaving = false);
+                }
+                return false;
+              },
+              child: list,
+            ),
     );
   }
 }
